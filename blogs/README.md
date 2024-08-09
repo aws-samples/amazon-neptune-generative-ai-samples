@@ -8,4 +8,4 @@ This repository contains supporting materials referenced in blogs about using ge
 
 ## Contributions
 
-We welcome community contributions! See [CONTRIBUTING](CONTRIBUTING.md) for more information.
+We welcome community contributions! See [CONTRIBUTING](../CONTRIBUTING.md) for more information.

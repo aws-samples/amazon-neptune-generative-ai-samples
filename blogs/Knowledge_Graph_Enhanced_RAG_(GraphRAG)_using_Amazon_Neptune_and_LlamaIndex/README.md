@@ -1,6 +1,6 @@
 # Knowledge Graph And Generative AI applications (GraphRAG) using Amazon Neptune and LlamaIndex
 
-In this blog series, we explore various methods that can be used with LlamaIndex to create applications built on top of LlamaIndex to satisfy these workflows. In each post, we will cover an aspect of how to use LlamaIndex with Amazon Neptune.
+In this blog series, we explore various methods that can be used to create applications built on top of LlamaIndex to satisfy different workflows. In each post, we cover an aspect of how to use LlamaIndex with Amazon Neptune.
 
 ## Posts
 

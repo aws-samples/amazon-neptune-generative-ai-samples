@@ -1,12 +1,10 @@
 """
 Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-SPDX-License-Identifier: Apache-2.0
+SPDX-License-Identifier: MIT-0
 """
 
 import streamlit as st
-from llm import (
-    run_natural_language_query,
-)
+from llm import natural_language_querying
 from utils import write_messages, create_display
 
 # Store LLM generated responses
@@ -22,7 +20,7 @@ if "messages_nlq" not in st.session_state.keys():
 messages = st.session_state.messages_nlq
 
 
-def run_query(prompt):
+def run_query(prompt: str):
     messages.append({"role": "user", "content": prompt})
 
     with tab1:
@@ -31,7 +29,7 @@ def run_query(prompt):
 
         with st.spinner(f"Executing using natural language query translation ..."):
             with st.chat_message("assistant"):
-                response = run_natural_language_query(prompt)
+                response = natural_language_querying.run_natural_language_query(prompt)
                 create_display(response["results"])
                 with st.popover("Query"):
                     st.code(response["query"])
@@ -76,6 +74,7 @@ with st.sidebar:
             "How many 'high' or 'critical' Vulnerabilities are there?",
             "Find me the components that have 'high' or 'critical' vulnerabilities?",
             "Find me the components that have 'high' or 'critical' vulnerabilities grouped by the component and severity, ordered by the component and severity?",
+            "Find me all the document where their is a shared component with a high or critical vulnerability?",
         ),
     )
 

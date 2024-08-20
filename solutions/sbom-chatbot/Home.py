@@ -1,3 +1,8 @@
+"""
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+SPDX-License-Identifier: MIT-0
+"""
+
 import streamlit as st
 from llm import get_vulnerability_list
 

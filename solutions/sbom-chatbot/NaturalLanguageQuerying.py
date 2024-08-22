@@ -50,8 +50,8 @@ MAX_RETRIES = 3
 
 
 class NaturalLanguageQuerying:
-    # Copying the default template so it doesn't get overwritten
-
+    """Perform Natrual Language to OC query generation using Bedrock and LlamaIndex
+    """
     def __init__(self, index, llm):
         self.graph_store = index.property_graph_store
         self.template = self.graph_store.text_to_cypher_template

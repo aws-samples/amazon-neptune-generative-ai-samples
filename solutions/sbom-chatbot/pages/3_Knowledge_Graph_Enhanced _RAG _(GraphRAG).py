@@ -4,7 +4,7 @@ SPDX-License-Identifier: MIT-0
 """
 
 import streamlit as st
-from llm import run_graphrag_answer_question
+from llm import knowledge_graph_enhanced_rag
 from utils import write_messages, create_display
 
 # ------------------------------------------------------------------------
@@ -35,10 +35,10 @@ def run_query(prompt):
 
         with st.spinner("Executing using Knowledge Graph enhanced RAG..."):
             with st.chat_message("assistant"):
-                response = run_graphrag_answer_question(prompt)
-                create_display(response["results"])
+                response = knowledge_graph_enhanced_rag.run_graphrag_answer_question(prompt)
+                create_display(response.response)
                 with st.popover("Quotes"):
-                    st.code(response["quotes"])
+                    st.dataframe(response.metadata)
                 messages.append(
                     {"role": "assistant", "content": response, "type": "table"}
                 )
@@ -69,9 +69,9 @@ with tab1:
     write_messages(messages)
 
 with tab2:
-    st.image("GraphRAG_Questions.png", use_column_width=True)
+    st.image("images/GraphRAG_Questions.png", use_column_width=True)
 
-    st.image("graph.png", use_column_width=True)
+    st.image("images/graph.png", use_column_width=True)
 
 # React to user input
 if prompt := st.chat_input():
@@ -86,6 +86,7 @@ with st.sidebar:
         (
             "What is an SBOM and what are the top reasons why we should use them?",
             "What are the recommended best practices for storing SBOM data?",
+            "What are the best practices around SBOMs for SaaS systems and how is that different than the proprietary software?"
         ),
     )
 

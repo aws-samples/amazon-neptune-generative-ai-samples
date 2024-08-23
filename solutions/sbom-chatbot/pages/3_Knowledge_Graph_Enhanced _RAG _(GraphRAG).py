@@ -37,8 +37,8 @@ def run_query(prompt):
             with st.chat_message("assistant"):
                 response = knowledge_graph_enhanced_rag.run_graphrag_answer_question(prompt)
                 create_display(response.response)
-                with st.popover("Quotes"):
-                    st.dataframe(response.metadata)
+                with st.popover("Evidence"):
+                    st.dataframe(response.metadata.values())
                 messages.append(
                     {"role": "assistant", "content": response, "type": "table"}
                 )

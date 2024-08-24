@@ -4,7 +4,6 @@ SPDX-License-Identifier: MIT-0
 """
 
 import streamlit as st
-from llm import get_vulnerability_list
 
 st.set_page_config(
     page_title="Neptune Generative AI Demo",
@@ -47,4 +46,3 @@ licensing requirements.
 
 st.write("### SBOM Graph Schema")
 st.image("images/schema.png", use_column_width=True)
-st.session_state.vulnerabiity_list = get_vulnerability_list()

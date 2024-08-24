@@ -122,6 +122,7 @@ class NaturalLanguageQuerying:
         retry = 0
         query = None
         error_msg = None
+        resp = None
         while retry < MAX_RETRIES:
             try:
                 self.cypher_retriever.text_to_cypher_template = self.__determine_prompt(

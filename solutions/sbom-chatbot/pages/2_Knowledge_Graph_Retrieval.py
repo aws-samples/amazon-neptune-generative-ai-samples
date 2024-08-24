@@ -5,7 +5,7 @@ SPDX-License-Identifier: MIT-0
 
 import streamlit as st
 import pandas as pd
-from llm import run_templated_query, get_vulnerability_list, QUERY_TYPES
+from llm import knowledge_graph_retreiver
 from utils import write_messages, create_display
 
 # ------------------------------------------------------------------------
@@ -26,7 +26,7 @@ if "messages_byokg" not in st.session_state.keys():
 messages = st.session_state.messages_byokg
 
 
-def run_query(prompt, type):
+def run_query(prompt):
     st.session_state.messages_byokg.append({"role": "user", "content": prompt})
 
     with tab1:
@@ -35,7 +35,7 @@ def run_query(prompt, type):
 
         with st.spinner(f"Executing using graph retrieval queries ..."):
             with st.chat_message("assistant"):
-                response = run_templated_query(prompt, type)
+                response = knowledge_graph_retreiver.run_retrieval_query(prompt)
                 create_display(response, key=sim_option)
                 st.session_state.messages_byokg.append(
                     {"role": "assistant", "content": response, "type": "table"}
@@ -66,7 +66,7 @@ with tab1:
     write_messages(messages)
 
 with tab2:
-    st.image("Templated_Questions.png", use_column_width=True)
+    st.image("images/Templated_Questions.png", use_column_width=True)
 
 
 # React to user input
@@ -77,15 +77,16 @@ if prompt := st.chat_input():
 with st.sidebar:
     st.header("Example Queries")
 
-    sim_option = st.selectbox("Select a Vulnerability:", get_vulnerability_list())
-
-    if st.button("Find the most similar", key="sim_queries"):
-        run_query(
-            f"What Vulnerabilities are similar to '{sim_option}'?",
-            QUERY_TYPES.Templated,
-        )
-    if st.button("Show me how they are connected", key="whole_dataset"):
-        run_query(
-            f"What Vulnerabilities are similar to '{sim_option}' and show me how they are connected",
-            QUERY_TYPES.Explainability,
-        )
+    sim_option = st.selectbox("Select a Component:", knowledge_graph_retreiver.component_list)
+    kg_option = st.selectbox(
+        "Select the query to run or enter your own below:",
+        (
+            f"Find me information about {sim_option}",
+            f"Find me documents and vulnerabilities associated with {sim_option}",
+            f"Find me all the documents that share component {sim_option} and their vulnerabilties",
+        ),
+    )
+    
+    if st.button("Try it out", key="kg_queries"):
+        run_query(kg_option)
+        

@@ -9,16 +9,19 @@ from llama_index.graph_stores.neptune import (
     NeptuneDatabasePropertyGraphStore,
 )
 from llama_index.core import PropertyGraphIndex, Settings
-import boto3
+import logging
 import os
 from dotenv import load_dotenv
 from NaturalLanguageQuerying import NaturalLanguageQuerying
 from KnowledgeGraphEnhancedRAG import KnowledgeGraphEnhancedRAG
+from KnowledgeGraphRetrieval import KnowledgeGraphRetriever
 
 # load the environment variables from .env file
 load_dotenv()
 
 vulnerability_list = None
+
+logging.basicConfig(level=logging.INFO)
 
 # Fetch configuration issues and set local variables
 kg_host: str = os.getenv("GRAPH_ENDPOINT")
@@ -57,34 +60,8 @@ index = PropertyGraphIndex.from_existing(
 )
 
 natural_language_querying = NaturalLanguageQuerying(index, llm)
+knowledge_graph_retreiver = KnowledgeGraphRetriever(index, llm)
 knowledge_graph_enhanced_rag = KnowledgeGraphEnhancedRAG(graphrag_store, llm, embed_model)
-
-
-def determine_query_information(prompt, query_type):
-    raise NotImplementedError("This function is not implemented yet.")
-
-
-# @st.cache_data
-# def get_vulnerability_list():
-#     data = run_graph_query(VULNERABILITY_LIST_QUERY)
-#     return [d["id"] for d in data]
-
-
-# def run_templated_query(query, type):
-#     resp = determine_query_information(query, type)
-#     return resp
-
-
-# def run_graphrag_query(query):
-#     resp = determine_query_information(query, QUERY_TYPES.GraphRAG)
-#     return resp
-
-
-# def run_graph_query(query, parameters={}):
-#     resp = neptune_client.execute_open_cypher_query(
-#         openCypherQuery=query, parameters=str(parameters)
-#     )
-#     return resp["results"]
 
 
 

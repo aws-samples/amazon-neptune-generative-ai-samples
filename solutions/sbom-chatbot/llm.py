@@ -1,6 +1,6 @@
 """
 Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-SPDX-License-Identifier: Apache-2.0
+SPDX-License-Identifier: MIT-0
 """
 
 from llama_index.llms.bedrock import Bedrock
@@ -11,6 +11,7 @@ from llama_index.graph_stores.neptune import (
 from llama_index.core import PropertyGraphIndex, Settings
 import logging
 import os
+import streamlit as st
 from dotenv import load_dotenv
 from NaturalLanguageQuerying import NaturalLanguageQuerying
 from KnowledgeGraphEnhancedRAG import KnowledgeGraphEnhancedRAG
@@ -28,10 +29,6 @@ kg_host: str = os.getenv("GRAPH_ENDPOINT")
 graphrag_host: str = os.getenv("GRAPHRAG_ENDPOINT")
 port: int = int(os.getenv("PORT", 8182))
 use_https = os.getenv("USE_HTTPS", "true").lower() in ("true", "1")
-# if use_https:
-#     kg_host_url = f"https://{kg_host}:{str(port)}"
-# else:
-#     kg_host_url = f"http://{kg_host}:{str(port)}"
 
 # Setup the llm to use Bedrock and the provided model name
 llm = Bedrock(
@@ -48,9 +45,6 @@ graph_store = NeptuneDatabasePropertyGraphStore(host=kg_host, use_https=use_http
 
 # Create the the PropertyGraphStore to use the provided Neptune Database
 graphrag_store = NeptuneDatabasePropertyGraphStore(host=graphrag_host, use_https=use_https, port=port)
-
-# # Create the Neptune Database Boto3 client
-# neptune_client = boto3.client("neptunedata", endpoint_url=host_url)
 
 # Create the PropertyGraphIndex for the provided graph store, llm, and embedding model
 index = PropertyGraphIndex.from_existing(

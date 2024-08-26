@@ -36,7 +36,7 @@ def run_query(prompt):
         with st.spinner(f"Executing using graph retrieval queries ..."):
             with st.chat_message("assistant"):
                 response = knowledge_graph_retreiver.run_retrieval_query(prompt)
-                create_display(response, key=sim_option)
+                create_display(response)
                 st.session_state.messages_byokg.append(
                     {"role": "assistant", "content": response, "type": "table"}
                 )

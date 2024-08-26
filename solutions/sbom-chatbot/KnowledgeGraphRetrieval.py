@@ -5,55 +5,73 @@ SPDX-License-Identifier: MIT-0
 
 from enum import Enum
 import logging
-# NOTE: current v1 is needed
+import ast
+from typing import List
 from pydantic.v1 import BaseModel, Field
 from llama_index.core.indices.property_graph import CypherTemplateRetriever
 from llama_index.core.llms import ChatMessage
-
-# create a pydantic class to represent the params for our query
-# the class fields are directly used as params for running the cypher query
-class ComponentParams(BaseModel):
-    """Template params for a cypher query."""
-
-    component_name: str = Field(
-        description="The component name to use for a start location of a query"
-    )
-
-COMPONENT_QUERY: str = """
-    MATCH (c:Component {name: $component_name})
-    RETURN c as component
-"""
-
-COMPONENT_EXPLAINABILITY_QUERY_EDGES: str = """
-    MATCH p=(n)-[]-(c:Component {name: $component_name})-[]-(noe:Vulnerability)
-    WITH relationships(p) as edges
-    UNWIND edges as e
-    RETURN collect(distinct e) as edges
-"""
-
-SHARED_COMPONENT_QUERY_EDGES: str = """
-    MATCH p=(n)-[]-(c:Component {name: $component_name})-[]-(:Vulnerability)-[]-(:Component)
-    WITH relationships(p) as edges
-    UNWIND edges as e
-    RETURN collect(distinct e) as edges
-"""
-
-
-COMPONENT_LIST_QUERY: str = """
-    MATCH (c:Component) WHERE exists(c.name) RETURN c.name as name ORDER BY c.name
-"""
-QUERY_TYPES = Enum("QUERY_TYPES", ["Fetch Component", "Explainability", "Unknown"])
+from llama_index.core import PropertyGraphIndex
+from llama_index.llms.bedrock import Bedrock
 
 logger = logging.getLogger(__name__)
 
 class KnowledgeGraphRetriever:
-    def __init__(self, index, llm):
+    """This demonstrates how to run Knowledge Graph Retrieval queries using
+    the CypherTemplateRetriever and LlamaIndex
+    """
+    class ComponentParams(BaseModel):
+        """Create a pydantic class to represent the params for our templated query.
+        The class fields are directly used as params for running the cypher query.
+        NOTE: currently v1 of Pydantic is needed"""
+
+        component_name: str = Field(
+            description="The component name to use for a start location of a query"
+        )
+    
+    COMPONENT_QUERY: str = """
+    MATCH (c:Component {name: $component_name})
+    RETURN c as component
+    """
+
+    COMPONENT_EXPLAINABILITY_QUERY: str = """
+        MATCH p=()-[]-(c:Component {name:  $component_name})-[]-(noe:Vulnerability)
+        UNWIND nodes(p) as n
+        RETURN {nodes: collect(DISTINCT n), edges: null} as res
+        UNION ALL
+        MATCH p=()-[]-(c:Component {name:  $component_name})-[]-(noe:Vulnerability)
+        UNWIND relationships(p) as e
+        RETURN {nodes: null, edges: collect(DISTINCT e)} as res
+    """
+
+    SHARED_COMPONENT_QUERY: str = """
+        MATCH p=()-[]-(c:Component {name: $component_name})-[]-(:Vulnerability)-[]-(:Component)
+        UNWIND nodes(p) as n
+        RETURN {nodes: collect(DISTINCT n), edges: null} as res
+        UNION ALL
+        MATCH p=(n)-[]-(c:Component {name: $component_name})-[]-(:Vulnerability)-[]-(:Component)
+        UNWIND relationships(p) as e
+        RETURN {nodes: null, edges: collect(DISTINCT e)} as res
+    """
+
+    COMPONENT_LIST_QUERY: str = """
+        MATCH (c:Component) WHERE exists(c.name) RETURN c.name as name ORDER BY c.name
+    """
+    
+    def __init__(self, index:PropertyGraphIndex, llm:Bedrock):
         self.index = index
         self.llm = llm
         self.graph_store = index.property_graph_store
         self.component_list = self._get_component_list()
     
-    def run_retrieval_query(self, prompt):
+    def run_retrieval_query(self, prompt:str) -> dict:
+        """Runs the retrieval query and returns the results
+
+        Args:
+            prompt (str): The prompt to run
+
+        Returns:
+            dict: A dictionary containing the "results" and "format"
+        """        
         messages = [
             ChatMessage(
                 role="system", content="""You are an expert in Software Bill of Materials  
@@ -71,22 +89,30 @@ class KnowledgeGraphRetriever:
         resp = self.llm.chat(messages)
         logger.info(resp)
         cypher_query = ""
+        response_format = "subgraph"
         match resp.message.content:
             case "COMPONENT_QUERY":
-                cypher_query = COMPONENT_QUERY
+                cypher_query = self.COMPONENT_QUERY
+                response_format = "table"
             case "COMPONENT_EXPLAINABILITY_QUERY_EDGES":
-                cypher_query = COMPONENT_EXPLAINABILITY_QUERY_EDGES                
+                cypher_query = self.COMPONENT_EXPLAINABILITY_QUERY                
             case "SHARED_COMPONENT_QUERY_EDGES":
-                cypher_query = SHARED_COMPONENT_QUERY_EDGES                
+                cypher_query =self.SHARED_COMPONENT_QUERY              
             case _:
-                return "The question asked is not supported by this application, please rephrase the question and try again."
+                return {"results": "The question asked is not supported by this application, please rephrase the question and try again.", "format": "string"}
             
         retriever = CypherTemplateRetriever(
-            self.graph_store, ComponentParams, cypher_query
+            self.graph_store, self.ComponentParams, cypher_query
         )
         nodes = retriever.retrieve(prompt)
-        return nodes[0].text
+        return {"results": ast.literal_eval(nodes[0].text), "format": response_format}
         
-    def _get_component_list(self):
-        data = self.graph_store.structured_query(COMPONENT_LIST_QUERY)
+    def _get_component_list(self) -> List[str]:
+        """Get a list of the component names
+
+        Returns:
+            List[str]: The component names
+        """
+        data = self.graph_store.structured_query(self.COMPONENT_LIST_QUERY)
         return [d["name"] for d in data]
+    

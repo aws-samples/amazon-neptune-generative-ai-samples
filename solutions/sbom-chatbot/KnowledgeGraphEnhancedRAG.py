@@ -7,19 +7,22 @@ import os
 from llama_index.core import SimpleDirectoryReader
 from llama_index.readers.file import PDFReader
 from llama_index.graph_stores.neptune import NeptuneDatabasePropertyGraphStore
+from llama_index.llms.bedrock import Bedrock
+from llama_index.embeddings.bedrock import BedrockEmbedding
 from llama_index.core import (
     PropertyGraphIndex,
     StorageContext,
     load_index_from_storage,
 )
-from llama_index.core import PromptTemplate
 
 PERSIST_DIR = "persist/pgi"
 
 logger = logging.getLogger(__name__)
 
 class KnowledgeGraphEnhancedRAG:
-    def __init__(self, graph_store, llm, embed_model):
+    """This class shows how to run a PropertyGraphIndex query over data using LlamaIndex
+    """
+    def __init__(self, graph_store:NeptuneDatabasePropertyGraphStore, llm:Bedrock, embed_model:BedrockEmbedding):
         self.graph_store = graph_store
         self.llm = llm
         self.embed_model = embed_model
@@ -29,7 +32,7 @@ class KnowledgeGraphEnhancedRAG:
                 llm=llm,
             )
         
-    def _load_pgi_index(self):
+    def _load_pgi_index(self) -> None:
         """Creates or loads the PG Index
 
         Args:
@@ -51,7 +54,7 @@ class KnowledgeGraphEnhancedRAG:
             self.index = PropertyGraphIndex.from_documents(
                 documents,
                 property_graph_store=self.graph_store,
-                embed_kg_nodes=False,
+                embed_kg_nodes=True,
                 llm=self.llm,
                 embed_model = self.embed_model,
                 show_progress=True
@@ -70,6 +73,14 @@ class KnowledgeGraphEnhancedRAG:
             self.index = load_index_from_storage(storage_context)
             logger.info("Loading PropertyGraphIndex from local complete")
 
-    def run_graphrag_answer_question(self, question):
+    def run_graphrag_answer_question(self, question:str) -> dict:
+        """Runs the GraphRAG Q/A
+
+        Args:
+            question (str): The question being asked
+
+        Returns:
+            dict: A dictionary of the response
+        """
         response = self.query_engine.query(question)
         return response

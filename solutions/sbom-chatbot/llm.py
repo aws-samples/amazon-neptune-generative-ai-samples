@@ -47,15 +47,29 @@ graph_store = NeptuneDatabasePropertyGraphStore(host=kg_host, use_https=use_http
 graphrag_store = NeptuneDatabasePropertyGraphStore(host=graphrag_host, use_https=use_https, port=port)
 
 # Create the PropertyGraphIndex for the provided graph store, llm, and embedding model
-index = PropertyGraphIndex.from_existing(
+def get_pgi_from_existing():
+    return PropertyGraphIndex.from_existing(
     property_graph_store=graph_store,
     embed_model=embed_model,
     llm=llm,
 )
 
-natural_language_querying = NaturalLanguageQuerying(index, llm)
-knowledge_graph_retreiver = KnowledgeGraphRetriever(index, llm)
-knowledge_graph_enhanced_rag = KnowledgeGraphEnhancedRAG(graphrag_store, llm, embed_model)
+@st.cache_resource(show_spinner=False)
+def get_natural_language_querying():
+    return NaturalLanguageQuerying(index, llm)
+ 
+@st.cache_resource(show_spinner=False)
+def get_knowledge_graph_retriever():
+    return KnowledgeGraphRetriever(index, llm)
+
+@st.cache_resource(show_spinner=False)
+def get_knowledge_graph_rag():
+    return KnowledgeGraphEnhancedRAG(graphrag_store, llm, embed_model)
+    
+index = get_pgi_from_existing()
+natural_language_querying = get_natural_language_querying()
+knowledge_graph_retreiver = get_knowledge_graph_retriever()
+knowledge_graph_enhanced_rag = get_knowledge_graph_rag()
 
 
 

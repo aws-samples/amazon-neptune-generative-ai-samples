@@ -30,9 +30,9 @@ def run_query(prompt: str):
         with st.spinner(f"Executing using natural language query translation ..."):
             with st.chat_message("assistant"):
                 response = natural_language_querying.run_natural_language_query(prompt)
-                create_display(response["results"])
+                create_display(response)
                 with st.popover("Query"):
-                    st.code(response["query"])
+                    st.code(response.explaination)
                 messages.append(
                     {"role": "assistant", "content": response, "type": "table"}
                 )

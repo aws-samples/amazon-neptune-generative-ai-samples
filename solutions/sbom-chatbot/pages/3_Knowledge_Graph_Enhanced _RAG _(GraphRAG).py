@@ -36,9 +36,9 @@ def run_query(prompt):
         with st.spinner("Executing using Knowledge Graph enhanced RAG..."):
             with st.chat_message("assistant"):
                 response = knowledge_graph_enhanced_rag.run_graphrag_answer_question(prompt)
-                create_display(response.response)
+                create_display(response)
                 with st.popover("Evidence"):
-                    st.dataframe(response.metadata.values())
+                    st.write(response.explaination)
                 messages.append(
                     {"role": "assistant", "content": response, "type": "table"}
                 )

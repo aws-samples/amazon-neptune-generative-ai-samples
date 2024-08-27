@@ -5,6 +5,7 @@ SPDX-License-Identifier: MIT-0
 
 import logging
 import ast
+from DisplayResult import DisplayResult
 from typing import List
 from llama_index.core.indices.property_graph import TextToCypherRetriever
 from langchain_community.chains.graph_qa.cypher_utils import CypherQueryCorrector
@@ -120,14 +121,14 @@ class NaturalLanguageQuerying:
             )
             return rewrite_template
 
-    def run_natural_language_query(self, prompt: str) -> dict:
+    def run_natural_language_query(self, prompt: str) -> DisplayResult:
         """This takes in the prompt and runs the natural language query against the graph store
 
         Args:
             prompt (str): The prompt question to answer
 
         Returns:
-            dict: A dictionary containing the results of the query and the query itself
+            DisplayResult: An object containing the results of the query and the query itself
         """
         retry = 0
         query = None
@@ -158,8 +159,5 @@ class NaturalLanguageQuerying:
             results = resp[0].text.split("\n\n")
             results[0].split("\n")
             res = ast.literal_eval(results[1].replace("Response:\n", ""))
-
-            return {
-                "results": res,
-                "query": results[0].replace("Query:\n", ""),
-            }
+            dr = DisplayResult(res, explaination=results[0].replace("Query:\n", ""), display_format=DisplayResult.DisplayFormat.NOTSPECIFIED)
+            return dr

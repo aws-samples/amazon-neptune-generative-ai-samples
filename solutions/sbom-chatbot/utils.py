@@ -3,6 +3,7 @@ Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 SPDX-License-Identifier: MIT-0
 """
 from typing import List
+from DisplayResult import DisplayResult
 import streamlit as st
 from st_cytoscape import cytoscape
 
@@ -13,24 +14,26 @@ def write_messages(message_state:List[dict]) -> None:
             create_display(message["content"])
 
 
-def create_display(response) -> None:
-    if isinstance(response, dict) or isinstance(response, list):
-        if isinstance(response, dict) and "format" in response and response["format"] == "subgraph":
-            setup_graph(response["results"])            
-        elif isinstance(response, dict) and "results" in response:
-            if isinstance(response["results"], dict) or isinstance(
-                response["results"], list
-            ):
-                st.dataframe(response["results"], use_container_width=True)
-            elif "results" in response:
-                st.write(response["results"])
-            else:
-                st.write(response)
-        else:
-            st.dataframe(response, use_container_width=True)
-
+def create_display(result) -> None:
+    if isinstance(result, str):    
+        st.write(result)
     else:
-        st.write(response)
+        response = result.results
+        match result.display_format:
+            case DisplayResult.DisplayFormat.SUBGRAPH:
+                setup_graph(response) 
+            case DisplayResult.DisplayFormat.STRING:
+                st.write(response)
+            case DisplayResult.DisplayFormat.TABLE:
+                st.dataframe(response, use_container_width=True)
+            case _:
+                if isinstance(response, dict) or isinstance(
+                    response, list
+                    ):
+                        st.dataframe(response, use_container_width=True)
+                else:
+                    st.write(response)
+                    
 
 def get_color(label):
     match label:

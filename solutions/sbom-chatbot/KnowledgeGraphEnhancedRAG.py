@@ -4,6 +4,7 @@ SPDX-License-Identifier: MIT-0
 """
 import logging
 import os
+from DisplayResult import DisplayResult
 from llama_index.core import SimpleDirectoryReader
 from llama_index.readers.file import PDFReader
 from llama_index.graph_stores.neptune import NeptuneDatabasePropertyGraphStore
@@ -73,14 +74,18 @@ class KnowledgeGraphEnhancedRAG:
             self.index = load_index_from_storage(storage_context)
             logger.info("Loading PropertyGraphIndex from local complete")
 
-    def run_graphrag_answer_question(self, question:str) -> dict:
+    def run_graphrag_answer_question(self, question:str) -> DisplayResult:
         """Runs the GraphRAG Q/A
 
         Args:
             question (str): The question being asked
 
         Returns:
-            dict: A dictionary of the response
+            DisplayResult: A DisplayResult of the response
         """
         response = self.query_engine.query(question)
-        return response
+        explaination = []
+        for n in response.source_nodes:
+            explaination.append({'score': n.score, 'text': n.text, 'file_name': n.metadata['file_name'], 
+                            'page_label': n.metadata['page_label']})
+        return DisplayResult(response.response, explaination = response,display_format=DisplayResult.DisplayFormat.STRING)

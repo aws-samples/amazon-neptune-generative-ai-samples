@@ -3,7 +3,7 @@ Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 SPDX-License-Identifier: MIT-0
 """
 
-from enum import Enum
+from DisplayResult import DisplayResult
 import logging
 import ast
 from typing import List
@@ -63,14 +63,14 @@ class KnowledgeGraphRetriever:
         self.graph_store = index.property_graph_store
         self.component_list = self._get_component_list()
     
-    def run_retrieval_query(self, prompt:str) -> dict:
+    def run_retrieval_query(self, prompt:str) -> DisplayResult:
         """Runs the retrieval query and returns the results
 
         Args:
             prompt (str): The prompt to run
 
         Returns:
-            dict: A dictionary containing the "results" and "format"
+            DisplayResult: A DisplayResult containing the formatted results
         """        
         messages = [
             ChatMessage(
@@ -89,23 +89,24 @@ class KnowledgeGraphRetriever:
         resp = self.llm.chat(messages)
         logger.info(resp)
         cypher_query = ""
-        response_format = "subgraph"
+        response_format = DisplayResult.DisplayFormat.SUBGRAPH
         match resp.message.content:
             case "COMPONENT_QUERY":
                 cypher_query = self.COMPONENT_QUERY
-                response_format = "table"
+                response_format = DisplayResult.DisplayFormat.TABLE
             case "COMPONENT_EXPLAINABILITY_QUERY_EDGES":
                 cypher_query = self.COMPONENT_EXPLAINABILITY_QUERY                
             case "SHARED_COMPONENT_QUERY_EDGES":
                 cypher_query =self.SHARED_COMPONENT_QUERY              
             case _:
-                return {"results": "The question asked is not supported by this application, please rephrase the question and try again.", "format": "string"}
+                return DisplayResult(ast.literal_eval("The question asked is not supported by this application, please rephrase the question and try again."), result_format = DisplayResult.DisplayFormat.STRING)
             
         retriever = CypherTemplateRetriever(
             self.graph_store, self.ComponentParams, cypher_query
         )
         nodes = retriever.retrieve(prompt)
-        return {"results": ast.literal_eval(nodes[0].text), "format": response_format}
+        dr = DisplayResult(ast.literal_eval(nodes[0].text), display_format = response_format)
+        return dr
         
     def _get_component_list(self) -> List[str]:
         """Get a list of the component names

@@ -2,12 +2,14 @@
 Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 SPDX-License-Identifier: MIT-0
 """
+
 from typing import List
 from DisplayResult import DisplayResult
 import streamlit as st
 from st_cytoscape import cytoscape
 
-def write_messages(message_state:List[dict]) -> None:
+
+def write_messages(message_state: List[dict]) -> None:
     # Display chat messages from history on app rerun
     for message in message_state:
         with st.chat_message(message["role"]):
@@ -15,34 +17,37 @@ def write_messages(message_state:List[dict]) -> None:
 
 
 def create_display(result) -> None:
-    if isinstance(result, str):    
+    if isinstance(result, str):
         st.write(result)
     else:
         response = result.results
-        match result.display_format:
-            case DisplayResult.DisplayFormat.SUBGRAPH:
-                setup_graph(response) 
-            case DisplayResult.DisplayFormat.STRING:
+        if result.display_format == DisplayResult.DisplayFormat.SUBGRAPH:
+            setup_graph(response)
+        elif result.display_format == DisplayResult.DisplayFormat.STRING:
+            if result.status == DisplayResult.Status.SUCCESS:
                 st.write(response)
-            case DisplayResult.DisplayFormat.TABLE:
+            else:
+                st.error(response)
+        elif result.display_format == DisplayResult.DisplayFormat.TABLE:
+            st.dataframe(response, use_container_width=True)
+        else:
+            if isinstance(response, dict) or isinstance(response, list):
                 st.dataframe(response, use_container_width=True)
-            case _:
-                if isinstance(response, dict) or isinstance(
-                    response, list
-                    ):
-                        st.dataframe(response, use_container_width=True)
-                else:
+            else:
+                if result.status == DisplayResult.Status.SUCCESS:
                     st.write(response)
-                    
+                else:
+                    st.error(response)
+
 
 def get_color(label):
     match label:
         case "Vulnerability":
             return "red"
         case "Component":
-            return "yellow"        
+            return "yellow"
         case "Document":
-            return "blue"  
+            return "blue"
         case "License":
             return "orange"
         case _:
@@ -60,8 +65,8 @@ def get_id(label, n):
 def setup_graph(data):
     elements = []
     for d in data:
-        if "nodes" in d['res'] and not d['res']["nodes"] is None:
-            for n in d['res']["nodes"]:
+        if "nodes" in d["res"] and not d["res"]["nodes"] is None:
+            for n in d["res"]["nodes"]:
                 color = get_color(n["~labels"][0])
                 id = get_id(n["~labels"][0], n)
                 elements.append(
@@ -74,10 +79,16 @@ def setup_graph(data):
                     }
                 )
 
-        if "edges" in d['res'] and not d['res']["edges"] is None:      
-            for e in d['res']["edges"]:
+        if "edges" in d["res"] and not d["res"]["edges"] is None:
+            for e in d["res"]["edges"]:
                 elements.append(
-                    {"data": {"source": e["~start"], "target": e["~end"], "label": e["~type"]}}
+                    {
+                        "data": {
+                            "source": e["~start"],
+                            "target": e["~end"],
+                            "label": e["~type"],
+                        }
+                    }
                 )
     stylesheet = [
         {
@@ -107,13 +118,11 @@ def setup_graph(data):
         "nodeRepulsion": 4096,
         "fit": True,
     }
-    if len(elements)>0:
+    if len(elements) > 0:
         return cytoscape(
-            elements,
-            stylesheet,
-            layout=layout,
-            selection_type="single",
-            height="400px"
+            elements, stylesheet, layout=layout, selection_type="single", height="400px"
         )
     else:
-        return st.write("The question returned no answers.  Please try again with a different question/combination.")
+        return st.write(
+            "The question returned no answers.  Please try again with a different question/combination."
+        )

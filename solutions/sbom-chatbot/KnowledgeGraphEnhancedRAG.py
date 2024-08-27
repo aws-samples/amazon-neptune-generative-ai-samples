@@ -43,13 +43,12 @@ class KnowledgeGraphEnhancedRAG:
         self.embed_model = embed_model
         self._load_pgi_index()
         self._load_kg_index()
-        self.pg_query_engine = self.index.as_query_engine(
+        self.pg_query_engine = self.pg_index.as_query_engine(
             include_text=True,
             llm=llm,
         )
         self.kg_query_engine = self.kg_index.as_query_engine(
-            include_text=True,
-            response_mode="tree_summarize",
+            include_text=False,
             llm=llm,
         )
 
@@ -71,7 +70,7 @@ class KnowledgeGraphEnhancedRAG:
             )
             documents = reader.load_data()
 
-            self.index = PropertyGraphIndex.from_documents(
+            self.pg_index = PropertyGraphIndex.from_documents(
                 documents,
                 property_graph_store=self.graph_store,
                 embed_kg_nodes=True,
@@ -81,7 +80,7 @@ class KnowledgeGraphEnhancedRAG:
             )
 
             # persistent storage
-            self.index.storage_context.persist(persist_dir=PERSIST_DIR + "/pgi")
+            self.pg_index.storage_context.persist(persist_dir=PERSIST_DIR + "/pgi")
 
             logger.info("Creation of PropertyGraphIndex from documents complete")
         else:
@@ -91,7 +90,7 @@ class KnowledgeGraphEnhancedRAG:
                 persist_dir=PERSIST_DIR + "/pgi",
                 property_graph_store=self.graph_store,
             )
-            self.index = load_index_from_storage(storage_context)
+            self.pg_index = load_index_from_storage(storage_context)
             logger.info("Loading PropertyGraphIndex from local complete")
 
     def run_graphrag_answer_question(self, question: str) -> DisplayResult:
@@ -116,7 +115,7 @@ class KnowledgeGraphEnhancedRAG:
             )
         return DisplayResult(
             response.response,
-            explaination=response,
+            explaination=explaination,
             display_format=DisplayResult.DisplayFormat.STRING,
         )
 
@@ -171,7 +170,7 @@ class KnowledgeGraphEnhancedRAG:
             )
 
             # persistent storage
-            self.index.storage_context.persist(persist_dir=PERSIST_DIR + "/kg")
+            self.kg_index.storage_context.persist(persist_dir=PERSIST_DIR + "/kg")
 
             logger.info("Creation of KnowledgeGraphIndex from documents complete")
         else:
@@ -200,12 +199,52 @@ class KnowledgeGraphEnhancedRAG:
                 {
                     "score": n.score,
                     "text": n.text,
-                    "file_name": n.metadata["file_name"],
-                    "page_label": n.metadata["page_label"],
+                    "relevant_text": n.metadata["kg_rel_texts"],
                 }
             )
         return DisplayResult(
             response.response,
-            explaination=response,
+            explaination=explaination,
             display_format=DisplayResult.DisplayFormat.STRING,
         )
+
+    def _load_vector_index(self) -> None:
+        """Creates or loads the Vector Index
+
+        Returns:
+            The loaded Vector Index
+        """
+        # check if kg storage already exists
+        if not os.path.exists(PERSIST_DIR + "/vector"):
+            # load the documents and create the index
+            logger.info("Creating VectorStoreIndex from documents")
+            storage_context = StorageContext.from_defaults(graph_store=self.graph_store)
+            parser = PDFReader()
+            file_extractor = {".pdf": parser}
+            reader = SimpleDirectoryReader(
+                input_dir="data/kg_enhanced_rag", file_extractor=file_extractor
+            )
+            documents = reader.load_data()
+
+            self.pg_index = PropertyGraphIndex.from_documents(
+                documents,
+                property_graph_store=self.graph_store,
+                embed_kg_nodes=True,
+                llm=self.llm,
+                embed_model=self.embed_model,
+                show_progress=True,
+            )
+
+            # persistent storage
+            self.pg_index.storage_context.persist(persist_dir=PERSIST_DIR + "/pgi")
+
+            logger.info("Creation of VectorStoreIndex from documents complete")
+        else:
+            # load the existing index
+            logger.info("Loading VectorStoreIndex from local")
+            storage_context = StorageContext.from_defaults(
+                persist_dir=PERSIST_DIR + "/pgi",
+                property_graph_store=self.graph_store,
+            )
+            self.pg_index = load_index_from_storage(storage_context)
+            logger.info("Loading VectorStoreIndex from local complete")

@@ -75,6 +75,7 @@ with st.sidebar:
             "Find me the components that have 'high' or 'critical' vulnerabilities?",
             "Find me the components that have 'high' or 'critical' vulnerabilities grouped by the component and severity, ordered by the component and severity?",
             "Find me all the document where their is a shared component with a high or critical vulnerability?",
+            "Delete all data",
         ),
     )
 

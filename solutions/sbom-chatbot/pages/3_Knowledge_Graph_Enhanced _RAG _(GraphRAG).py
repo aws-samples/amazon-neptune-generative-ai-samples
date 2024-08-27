@@ -85,7 +85,7 @@ with tab2:
 
 # React to user input
 if prompt := st.chat_input():
-    run_query(prompt)
+    run_query(prompt, st.session_state.index_option)
 
 # Configure the sidebar with the example questions
 with st.sidebar:
@@ -104,6 +104,7 @@ with st.sidebar:
         "Select the type of index to use",
         ("Property Graph Index", "Knowledge Graph Index"),
     )
+    st.session_state.index_option = index_option
 
     if st.button("Try it out", key="graphrag"):
         run_query(kg_option, index_option)

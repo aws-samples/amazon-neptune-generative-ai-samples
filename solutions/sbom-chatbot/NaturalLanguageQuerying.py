@@ -10,19 +10,19 @@ from typing import List
 from llama_index.core.indices.property_graph import TextToCypherRetriever
 from langchain_community.chains.graph_qa.cypher_utils import CypherQueryCorrector
 from langchain_community.chains.graph_qa.cypher_utils import Schema
-from llama_index.graph_stores.neptune import NeptuneQueryException, NeptuneDatabasePropertyGraphStore
+from llama_index.graph_stores.neptune import (
+    NeptuneQueryException,
+    NeptuneDatabasePropertyGraphStore,
+)
 from llama_index.core import PromptTemplate
 from llama_index.llms.bedrock import Bedrock
 
 logger = logging.getLogger(__name__)
 
 
-
-
 class NaturalLanguageQuerying:
-    """Perform Natrual Language to OC query generation using Bedrock and LlamaIndex
-    """
-    
+    """Perform Natrual Language to OC query generation using Bedrock and LlamaIndex"""
+
     DEFAULT_RESPONSE_TEMPLATE = "Query:\n{query}\n\nResponse:\n{response}"
     DEFAULT_TEXT_TO_CYPHER_TEMPLATE = """Task:Generate Cypher statement to query a graph database.\nInstructions:\n
     You are an expert in AWS Infrastructure and Software Bill Of Materials. \n
@@ -62,8 +62,8 @@ class NaturalLanguageQuerying:
     Insecure IAM policies mean that they are using either the policy name is AdministratorAccess or contain wildcards(*) within the policy text
     """
     MAX_RETRIES = 3
-    
-    def __init__(self, index:NeptuneDatabasePropertyGraphStore, llm:Bedrock):
+
+    def __init__(self, index: NeptuneDatabasePropertyGraphStore, llm: Bedrock):
         self.graph_store = index.property_graph_store
         self.template = self.graph_store.text_to_cypher_template
         # Configure the TextToCypher Retriever
@@ -143,9 +143,17 @@ class NaturalLanguageQuerying:
                 resp = self.cypher_retriever.retrieve(prompt)
                 break
             except NeptuneQueryException as e:
-                if e.message.find("MalformedQueryException") != -1:
+                if e.details.find("MalformedQueryException") != -1:
                     logger.error(e)
                     raise e
+                elif e.details.find("AccessDeniedException") != -1:
+                    logger.error(e)
+                    return DisplayResult(
+                        "You do not have permission to perform this action.  Please try a different question.",
+                        explaination=e.args[0]["query"],
+                        display_format=DisplayResult.DisplayFormat.STRING,
+                        status=DisplayResult.Status.ERROR,
+                    )
                 else:
                     logger.info(
                         f"Generated Query Failed with the following message: {e}"
@@ -154,10 +162,18 @@ class NaturalLanguageQuerying:
                     error_msg = e.args[0]["details"]
                     retry += 1
         if resp is None or len(resp) == 0:
-            return {"results": "No results found", "query": prompt}
+            return DisplayResult(
+                "No results found",
+                explaination=results[0].replace("Query:\n", ""),
+                display_format=DisplayResult.DisplayFormat.STRING,
+            )
         else:
             results = resp[0].text.split("\n\n")
             results[0].split("\n")
             res = ast.literal_eval(results[1].replace("Response:\n", ""))
-            dr = DisplayResult(res, explaination=results[0].replace("Query:\n", ""), display_format=DisplayResult.DisplayFormat.NOTSPECIFIED)
+            dr = DisplayResult(
+                res,
+                explaination=results[0].replace("Query:\n", ""),
+                display_format=DisplayResult.DisplayFormat.NOTSPECIFIED,
+            )
             return dr

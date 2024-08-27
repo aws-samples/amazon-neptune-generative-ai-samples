@@ -7,6 +7,7 @@ from llama_index.llms.bedrock import Bedrock
 from llama_index.embeddings.bedrock import BedrockEmbedding
 from llama_index.graph_stores.neptune import (
     NeptuneDatabasePropertyGraphStore,
+    NeptuneDatabaseGraphStore
 )
 from llama_index.core import PropertyGraphIndex, Settings
 import logging
@@ -27,6 +28,7 @@ logging.basicConfig(level=logging.INFO)
 # Fetch configuration issues and set local variables
 kg_host: str = os.getenv("GRAPH_ENDPOINT")
 graphrag_host: str = os.getenv("GRAPHRAG_ENDPOINT")
+kgrag_host: str = os.getenv("KGRAG_ENDPOINT")
 port: int = int(os.getenv("PORT", 8182))
 use_https = os.getenv("USE_HTTPS", "true").lower() in ("true", "1")
 
@@ -40,10 +42,9 @@ Settings.llm = llm
 embed_model = BedrockEmbedding(model="amazon.titan-embed-text-v1")
 Settings.embed_model = embed_model
 
-# Create the the PropertyGraphStore to use the provided Neptune Database
+# Create the the PropertyGraphStore and KG Graph Store to use the provided Neptune Database
 graph_store = NeptuneDatabasePropertyGraphStore(host=kg_host, use_https=use_https, port=port)
-
-# Create the the PropertyGraphStore to use the provided Neptune Database
+kg_graph_store = NeptuneDatabaseGraphStore(host=kgrag_host, use_https=use_https, port=port)
 graphrag_store = NeptuneDatabasePropertyGraphStore(host=graphrag_host, use_https=use_https, port=port)
 
 # Create the PropertyGraphIndex for the provided graph store, llm, and embedding model
@@ -64,7 +65,7 @@ def get_knowledge_graph_retriever():
 
 @st.cache_resource(show_spinner=False)
 def get_knowledge_graph_rag():
-    return KnowledgeGraphEnhancedRAG(graphrag_store, llm, embed_model)
+    return KnowledgeGraphEnhancedRAG(graphrag_store,kg_graph_store, llm, embed_model)
     
 index = get_pgi_from_existing()
 natural_language_querying = get_natural_language_querying()

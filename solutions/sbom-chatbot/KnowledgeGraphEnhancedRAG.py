@@ -17,6 +17,7 @@ from llama_index.embeddings.bedrock import BedrockEmbedding
 from llama_index.core import (
     PropertyGraphIndex,
     KnowledgeGraphIndex,
+    VectorStoreIndex,
     StorageContext,
     load_index_from_storage,
     PromptTemplate,
@@ -43,12 +44,16 @@ class KnowledgeGraphEnhancedRAG:
         self.embed_model = embed_model
         self._load_pgi_index()
         self._load_kg_index()
+        self._load_vector_index()
         self.pg_query_engine = self.pg_index.as_query_engine(
             include_text=True,
             llm=llm,
         )
         self.kg_query_engine = self.kg_index.as_query_engine(
             include_text=False,
+            llm=llm,
+        )
+        self.vector_query_engine = self.vector_index.as_query_engine(
             llm=llm,
         )
 
@@ -226,25 +231,51 @@ class KnowledgeGraphEnhancedRAG:
             )
             documents = reader.load_data()
 
-            self.pg_index = PropertyGraphIndex.from_documents(
+            self.vector_index = VectorStoreIndex.from_documents(
                 documents,
-                property_graph_store=self.graph_store,
-                embed_kg_nodes=True,
                 llm=self.llm,
                 embed_model=self.embed_model,
                 show_progress=True,
             )
 
             # persistent storage
-            self.pg_index.storage_context.persist(persist_dir=PERSIST_DIR + "/pgi")
+            self.vector_index.storage_context.persist(
+                persist_dir=PERSIST_DIR + "/vector"
+            )
 
             logger.info("Creation of VectorStoreIndex from documents complete")
         else:
             # load the existing index
             logger.info("Loading VectorStoreIndex from local")
             storage_context = StorageContext.from_defaults(
-                persist_dir=PERSIST_DIR + "/pgi",
+                persist_dir=PERSIST_DIR + "/vector",
                 property_graph_store=self.graph_store,
             )
-            self.pg_index = load_index_from_storage(storage_context)
+            self.vector_index = load_index_from_storage(storage_context)
             logger.info("Loading VectorStoreIndex from local complete")
+
+    def run_vector_answer_question(self, question: str) -> DisplayResult:
+        """Runs the Vector RAG Q/A
+
+        Args:
+            question (str): The question being asked
+
+        Returns:
+            DisplayResult: A DisplayResult of the response
+        """
+        response = self.vector_query_engine.query(question)
+        explaination = []
+        for n in response.source_nodes:
+            explaination.append(
+                {
+                    "score": n.score,
+                    "text": n.text,
+                    "file_name": n.metadata["file_name"],
+                    "page_label": n.metadata["page_label"],
+                }
+            )
+        return DisplayResult(
+            response.response,
+            explaination=explaination,
+            display_format=DisplayResult.DisplayFormat.STRING,
+        )

@@ -35,11 +35,15 @@ def run_query(prompt, index):
 
         with st.spinner("Executing using Knowledge Graph enhanced RAG..."):
             with st.chat_message("assistant"):
-                if index == "Property Graph Index":
+                if index == "Contextual Graph Index":
                     response = (
                         knowledge_graph_enhanced_rag.run_graphrag_answer_question(
                             prompt
                         )
+                    )
+                elif index == "Vector Index":
+                    response = knowledge_graph_enhanced_rag.run_vector_answer_question(
+                        prompt
                     )
                 else:
                     response = knowledge_graph_enhanced_rag.run_kgrag_answer_question(
@@ -73,7 +77,7 @@ st.write(
 )
 
 # Setup columns for the two chatbots
-tab1, tab2 = st.tabs(["Chat", "Architecture"])
+tab1, tab2, tab3 = st.tabs(["Chat", "Architecture", "Data Model"])
 with tab1:
     # Setup the chat input
     write_messages(messages)
@@ -81,6 +85,7 @@ with tab1:
 with tab2:
     st.image("images/GraphRAG_Questions.png", use_column_width=True)
 
+with tab3:
     st.image("images/graph.png", use_column_width=True)
 
 # React to user input
@@ -100,9 +105,18 @@ with st.sidebar:
         ),
     )
 
-    index_option = st.selectbox(
+    index_option = st.radio(
         "Select the type of index to use",
-        ("Property Graph Index", "Knowledge Graph Index"),
+        [
+            "Vector Index",
+            "Triplet Graph Index",
+            "Contextual Graph Index",
+        ],
+        captions=[
+            "Uses Vectors Only",
+            "Uses a graph based on subject-predicate-object triplets",
+            "Uses a contextual graph of chunks and mentioned entities",
+        ],
     )
     st.session_state.index_option = index_option
 

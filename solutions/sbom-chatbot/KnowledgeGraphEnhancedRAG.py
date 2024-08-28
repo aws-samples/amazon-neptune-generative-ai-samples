@@ -56,6 +56,8 @@ class KnowledgeGraphEnhancedRAG:
         self.vector_query_engine = self.vector_index.as_query_engine(
             llm=llm,
         )
+        self.vector_retriever = self.vector_index.as_retriever()
+        self.pgi_retriever = self.pg_index.as_retriever()
 
     def _load_pgi_index(self) -> None:
         """Creates or loads the PG Index
@@ -122,6 +124,7 @@ class KnowledgeGraphEnhancedRAG:
             response.response,
             explaination=explaination,
             display_format=DisplayResult.DisplayFormat.STRING,
+            status=DisplayResult.Status.SUCCESS,
         )
 
     def _load_kg_index(self) -> None:
@@ -211,6 +214,7 @@ class KnowledgeGraphEnhancedRAG:
             response.response,
             explaination=explaination,
             display_format=DisplayResult.DisplayFormat.STRING,
+            status=DisplayResult.Status.SUCCESS,
         )
 
     def _load_vector_index(self) -> None:
@@ -278,4 +282,18 @@ class KnowledgeGraphEnhancedRAG:
             response.response,
             explaination=explaination,
             display_format=DisplayResult.DisplayFormat.STRING,
+            status=DisplayResult.Status.SUCCESS,
         )
+
+    def run_hybrid_answer_question(self, question: str) -> DisplayResult:
+        """Runs the Hybrid RAG Q/A
+
+        Args:
+            question (str): The question being asked
+
+        Returns:
+            DisplayResult: A DisplayResult of the response
+        """
+        vector_resp = self.vector_retriever.retrieve(question)
+        graph_resp = self.pgi_retriever.retrieve(question)
+        return None

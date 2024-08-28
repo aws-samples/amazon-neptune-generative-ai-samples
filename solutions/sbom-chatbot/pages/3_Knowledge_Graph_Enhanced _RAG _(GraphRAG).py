@@ -45,6 +45,10 @@ def run_query(prompt, index):
                     response = knowledge_graph_enhanced_rag.run_vector_answer_question(
                         prompt
                     )
+                elif index == "Hybrid Search":
+                    response = knowledge_graph_enhanced_rag.run_hybrid_answer_question(
+                        prompt
+                    )
                 else:
                     response = knowledge_graph_enhanced_rag.run_kgrag_answer_question(
                         prompt
@@ -83,10 +87,24 @@ with tab1:
     write_messages(messages)
 
 with tab2:
-    st.image("images/GraphRAG_Questions.png", use_column_width=True)
+    indexing, retrieval = st.tabs(["Indexing", "Retrieval"])
+    with indexing:
+        with st.expander("RAG Indexing"):
+            st.image("images/rag-indexing.png", use_column_width=True)
+
+        with st.expander("GraphRAG Indexing"):
+            st.image("images/graphrag-indexing.png", use_column_width=True)
+    with retrieval:
+        with st.expander("RAG Retrieval"):
+            st.image("images/rag-retrieval.png", use_column_width=True)
+        with st.expander("GraphRAG Retrieval"):
+            st.image("images/graphrag-retrieval.png", use_column_width=True)
 
 with tab3:
-    st.image("images/graph.png", use_column_width=True)
+    with st.expander("Triplet Data Model"):
+        st.image("images/triplet-data-model.png", use_column_width=True)
+    with st.expander("Contextual Data Model"):
+        st.image("images/contextual-data-model.png", use_column_width=True)
 
 # React to user input
 if prompt := st.chat_input():
@@ -99,9 +117,9 @@ with st.sidebar:
     kg_option = st.selectbox(
         "Select a Knowledge Graph Query to run:",
         (
-            "What is an SBOM and what are the top reasons why we should use them?",
-            "What are the recommended best practices for storing SBOM data?",
-            "What are the best practices around SBOMs for SaaS systems and how is that different than the proprietary software?",
+            "What is an SBOM?",
+            "Summarize the information a SaaS provider has to supply me on vulnerabilities and how does that impact my software development process for my SaaS software?",
+            "I have a supplier that is not willing to provide me with SBOM data, provide me the reasoning I need to go back to them and discuss why this is a requirement and not an option",
         ),
     )
 

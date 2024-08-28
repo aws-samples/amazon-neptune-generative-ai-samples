@@ -25,7 +25,7 @@ def create_display(result) -> None:
             setup_graph(response)
         elif result.display_format == DisplayResult.DisplayFormat.STRING:
             if result.status == DisplayResult.Status.SUCCESS:
-                st.write(response)
+                st.info(response)
             else:
                 st.error(response)
         elif result.display_format == DisplayResult.DisplayFormat.TABLE:
@@ -35,7 +35,7 @@ def create_display(result) -> None:
                 st.dataframe(response, use_container_width=True)
             else:
                 if result.status == DisplayResult.Status.SUCCESS:
-                    st.write(response)
+                    st.info(response)
                 else:
                     st.error(response)
 

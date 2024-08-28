@@ -32,6 +32,7 @@ class NaturalLanguageQuerying:
     than for you to construct a Cypher statement.\nDo not include any text except the generated Cypher statement.\n\n
     The question is:\n{question}
     Wrap all property names in backticks except for label names.\n
+    When asking for the component id return the id().\n
     Ensure that all property names are used in conjunction with the correct node or relationship alias.\n
     All comparisons with string values should be done in lowercase.\n
     Do not use RegexMatch queries, use a lowercase CONTAINS search instead.\n
@@ -54,6 +55,7 @@ class NaturalLanguageQuerying:
     The previous Cypher statement is:\n{previous_cypher}\n
     The previous error message is:\n{error_message}\n\n
     Wrap all property names in backticks except for label names.\n
+    When asking for the component id return the id().\n
     Ensure that all property names are used in conjunction with the correct node or relationship alias.\n
     All comparisons with string values should be done in lowercase.\n
     Do not use RegexMatch queries, use a lowercase CONTAINS search instead.\n

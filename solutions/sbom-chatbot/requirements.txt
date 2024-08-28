@@ -119,6 +119,7 @@ soupsieve==2.6
 SQLAlchemy==2.0.32
 st-cytoscape==0.0.5
 streamlit==1.37.1
+streamlit_carousel==1.1.2
 striprtf==0.0.26
 tenacity==8.5.0
 tiktoken==0.7.0

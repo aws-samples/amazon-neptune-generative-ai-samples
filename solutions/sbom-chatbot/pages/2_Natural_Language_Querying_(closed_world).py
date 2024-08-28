@@ -53,21 +53,20 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("Query an Existing Knowledge Graph")
-st.write(
-    """Using Amazon Bedrock Foundation models, your natural language question will have the key entities extracted, 
-    which are then be run using templated queries, and results returned."""
-)
+st.title("Natural Language Query (Closed World)")
+st.write("""Often when working with """)
 
 # Setup columns for the two chatbots
-tab1, tab2 = st.tabs(["Chat", "Architecture"])
+tab1, tab2, tab3 = st.tabs(["Chat", "Architecture", "Data Model"])
 with tab1:
     # Setup the chat input
     write_messages(messages)
 
 with tab2:
-    st.image("images/Templated_Questions.png", use_column_width=True)
+    st.image("images/nlq-closed-world.png", use_column_width=True)
 
+with tab3:
+    st.image("images/schema.png", use_column_width=True)
 
 # React to user input
 if prompt := st.chat_input():
@@ -77,16 +76,18 @@ if prompt := st.chat_input():
 with st.sidebar:
     st.header("Example Queries")
 
-    sim_option = st.selectbox("Select a Component:", knowledge_graph_retreiver.component_list)
     kg_option = st.selectbox(
-        "Select the query to run or enter your own below:",
+        "Select the question to ask:",
         (
-            f"Find me information about {sim_option}",
-            f"Find me documents and vulnerabilities associated with {sim_option}",
-            f"Find me all the documents that share component {sim_option} and their vulnerabilties",
+            f"Find me information about _____",
+            f"Find me documents and vulnerabilities associated with _____",
+            f"Find me all the documents that share component _____ and their vulnerabilties",
         ),
     )
-    
+
+    sim_option = st.selectbox(
+        "Select a Library (Component):", knowledge_graph_retreiver.component_list
+    )
+
     if st.button("Try it out", key="kg_queries"):
-        run_query(kg_option)
-        
+        run_query(kg_option.replace("_____", sim_option))

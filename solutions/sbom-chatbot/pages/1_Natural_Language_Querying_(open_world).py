@@ -51,13 +51,16 @@ st.write(
     which will then be run, and results returned."""
 )
 
-tab1, tab2 = st.tabs(["Chat", "Architecture"])
+tab1, tab2, tab3 = st.tabs(["Chat", "Architecture", "Data Model"])
 with tab1:
     # Setup the chat input
     write_messages(messages)
 
 with tab2:
-    st.image("images/NLQ.png", use_column_width=True)
+    st.image("images/nlq-open-world.png", use_column_width=True)
+
+with tab3:
+    st.image("images/schema.png", use_column_width=True)
 
 # React to user input
 if prompt := st.chat_input():
@@ -71,10 +74,11 @@ with st.sidebar:
         "Select the query to run or enter your own below:",
         (
             "How many Vulnerabilities exist?",
-            "How many 'high' or 'critical' Vulnerabilities are there?",
-            "Find me the components that have 'high' or 'critical' vulnerabilities?",
-            "Find me the components that have 'high' or 'critical' vulnerabilities grouped by the component and severity, ordered by the component and severity?",
-            "Find me all the document where their is a shared component with a high or critical vulnerability?",
+            """Find me the components that have 'high' or 'critical' vulnerabilities? 
+  Return the component and number of vulnerabilities grouped by severity. 
+  Group by component and severity count, order by component then by severity""",
+            """Find me all the document where their is a shared component with a high or critical vulnerability. 
+  Return the component id, severity, and count of vulnerabilities. Group by component and severity count, order by component then by severity""",
             "Delete all data",
         ),
     )

@@ -7,6 +7,7 @@ class DisplayResult:
         TABLE = "table"
         SUBGRAPH = "subgraph"
         STRING = "string"
+        JSON = "json"
         NOTSPECIFIED = "notspecified"
 
     class Status(Enum):

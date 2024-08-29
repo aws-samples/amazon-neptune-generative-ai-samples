@@ -7,6 +7,7 @@ from typing import List
 from DisplayResult import DisplayResult
 import streamlit as st
 from st_cytoscape import cytoscape
+import uuid
 
 
 def write_messages(message_state: List[dict]) -> None:
@@ -22,7 +23,8 @@ def create_display(result) -> None:
     else:
         response = result.results
         if result.display_format == DisplayResult.DisplayFormat.SUBGRAPH:
-            setup_graph(response)
+            with st.form(str(uuid.uuid4())):
+                setup_graph(response)
         elif result.display_format == DisplayResult.DisplayFormat.STRING:
             if result.status == DisplayResult.Status.SUCCESS:
                 st.info(response)
@@ -30,6 +32,8 @@ def create_display(result) -> None:
                 st.error(response)
         elif result.display_format == DisplayResult.DisplayFormat.TABLE:
             st.dataframe(response, use_container_width=True)
+        elif result.display_format == DisplayResult.DisplayFormat.JSON:
+            st.json(response)
         else:
             if isinstance(response, dict) or isinstance(response, list):
                 st.dataframe(response, use_container_width=True)

@@ -145,10 +145,14 @@ class NaturalLanguageQuerying:
                 resp = self.cypher_retriever.retrieve(prompt)
                 break
             except NeptuneQueryException as e:
-                if e.details.find("MalformedQueryException") != -1:
-                    logger.error(e)
-                    raise e
-                elif e.details.find("AccessDeniedException") != -1:
+                if "MalformedQueryException" in e.details:
+                    logger.info(
+                        f"Generated Query Failed with the following message: {e}"
+                    )
+                    query = e.args[0]["query"]
+                    error_msg = e.args[0]["details"]
+                    retry += 1
+                elif "AccessDeniedException" in e.details:
                     logger.error(e)
                     return DisplayResult(
                         "You do not have permission to perform this action.  Please try a different question.",
@@ -157,18 +161,27 @@ class NaturalLanguageQuerying:
                         status=DisplayResult.Status.ERROR,
                     )
                 else:
-                    logger.info(
-                        f"Generated Query Failed with the following message: {e}"
+                    logger.error(e)
+                    return DisplayResult(
+                        "We were unable to get a valid query result for the provided question.  Please try again or modify the question.",
+                        explaination=e.args[0]["query"],
+                        display_format=DisplayResult.DisplayFormat.STRING,
+                        status=DisplayResult.Status.ERROR,
                     )
-                    query = e.args[0]["query"]
-                    error_msg = e.args[0]["details"]
-                    retry += 1
         if resp is None or len(resp) == 0:
-            return DisplayResult(
-                "No results found",
-                explaination=results[0].replace("Query:\n", ""),
-                display_format=DisplayResult.DisplayFormat.STRING,
-            )
+            if retry == self.MAX_RETRIES:
+                return DisplayResult(
+                    "A suitable query was not able to be created, please modify the question and try again.",
+                    explaination=query,
+                    display_format=DisplayResult.DisplayFormat.STRING,
+                    status=DisplayResult.Status.ERROR,
+                )
+            else:
+                return DisplayResult(
+                    "No results found",
+                    display_format=DisplayResult.DisplayFormat.STRING,
+                    status=DisplayResult.Status.SUCCESS,
+                )
         else:
             results = resp[0].text.split("\n\n")
             results[0].split("\n")
@@ -177,5 +190,6 @@ class NaturalLanguageQuerying:
                 res,
                 explaination=results[0].replace("Query:\n", ""),
                 display_format=DisplayResult.DisplayFormat.NOTSPECIFIED,
+                status=DisplayResult.Status.SUCCESS,
             )
             return dr

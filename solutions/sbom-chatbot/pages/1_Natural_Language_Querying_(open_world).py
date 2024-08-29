@@ -74,14 +74,11 @@ with st.sidebar:
         "Select the query to run or enter your own below:",
         (
             "How many Vulnerabilities exist?",
-            """Find me the components that have 'high' or 'critical' vulnerabilities? 
-  Return the component and number of vulnerabilities grouped by severity. 
-  Group by component and severity count, order by component then by severity""",
-            """Find me all the document where their is a shared component with a high or critical vulnerability. 
-  Return the component id, severity, and count of vulnerabilities. Group by component and severity count, order by component then by severity""",
-            "Delete all data",
+            """Find me the components that have 'high' or 'critical' vulnerabilities?  Return the component and number of vulnerabilities grouped by severity. 
+Group by component and severity count, order by component then by severity""",
+            "Delete all data in the database    ",
         ),
     )
 
     if st.button("Try it out", key="kg_queries"):
-        run_query(kg_option)
+        run_query(kg_option.replace("/n", ""))

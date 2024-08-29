@@ -23,8 +23,8 @@ st.markdown(
     
     ### Want to learn more?
     
-    - Click `Natural Language Querying` to see how Amazon Bedrock can convert natural language questions into openCypher queries run on Amazon Neptune
-    - Click `Query an Existing Knowledge Graph` to see how to use Amazon Bedrock to extract key entities from natural language questions, which are then used to run templated queries
+    - Click `Natural Language Querying (open world)` to see how Amazon Bedrock can convert natural language questions into openCypher queries run on Amazon Neptune
+    - Click `Natural Language Querying (closed world)` to see how to use Amazon Bedrock to extract key entities from natural language questions, which are then used to run templated queries
     - Click `Knowledge Graph Enhanced RAG` to see how you can combine Knowledge Graphs with RAG applications to add domain knowledge to a RAG application to provide more complete and explainable answers
 """
 )

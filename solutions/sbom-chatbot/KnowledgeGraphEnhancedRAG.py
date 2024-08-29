@@ -42,13 +42,13 @@ class KnowledgeGraphEnhancedRAG:
         self.kg_graph_store = kg_graph_store
         self.llm = llm
         self.embed_model = embed_model
-        self._load_pgi_index()
+        # self._load_pgi_index()
         self._load_kg_index()
         self._load_vector_index()
-        self.pg_query_engine = self.pg_index.as_query_engine(
-            include_text=True,
-            llm=llm,
-        )
+        # self.pg_query_engine = self.pg_index.as_query_engine(
+        #     include_text=True,
+        #     llm=llm,
+        # )
         self.kg_query_engine = self.kg_index.as_query_engine(
             include_text=False,
             llm=llm,
@@ -57,7 +57,7 @@ class KnowledgeGraphEnhancedRAG:
             llm=llm,
         )
         self.vector_retriever = self.vector_index.as_retriever()
-        self.pgi_retriever = self.pg_index.as_retriever()
+        # self.pgi_retriever = self.pg_index.as_retriever()
 
     def _load_pgi_index(self) -> None:
         """Creates or loads the PG Index

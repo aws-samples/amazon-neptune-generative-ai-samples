@@ -82,11 +82,12 @@ with st.sidebar:
             f"Find me information about _____",
             f"Find me documents and vulnerabilities associated with _____",
             f"Find me all the documents that share component _____ and their vulnerabilties",
+            "Delete all data in the database",
         ),
     )
 
     sim_option = st.selectbox(
-        "Select a Library (Component):", knowledge_graph_retreiver.component_list
+        "Select a Library (Component):", ["libssl3", "openldap", "openjdk11-jre", "yum"]
     )
 
     if st.button("Try it out", key="kg_queries"):

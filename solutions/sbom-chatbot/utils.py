@@ -7,44 +7,59 @@ from typing import List
 from DisplayResult import DisplayResult
 import streamlit as st
 from st_cytoscape import cytoscape
-import uuid
 
 
 def write_messages(message_state: List[dict]) -> None:
-    # Display chat messages from history on app rerun
+    """Display chat messages from history on app rerun
+
+    Args:
+        message_state (List[dict]): The message state
+    """
     for message in message_state:
         with st.chat_message(message["role"]):
             create_display(message["content"])
 
 
-def create_display(result) -> None:
+def create_display(result: object) -> None:
+    """Creates the display feature for the given input (string or DisplayResult)
+
+    Args:
+        result (object): The input to display
+    """
     if isinstance(result, str):
         st.write(result)
     else:
         response = result.results
-        if result.display_format == DisplayResult.DisplayFormat.SUBGRAPH:
-            with st.form(str(uuid.uuid4())):
-                setup_graph(response)
-        elif result.display_format == DisplayResult.DisplayFormat.STRING:
-            if result.status == DisplayResult.Status.SUCCESS:
+        if result.display_format.value == DisplayResult.DisplayFormat.SUBGRAPH.value:
+            setup_graph(response)
+        elif result.display_format.value == DisplayResult.DisplayFormat.STRING.value:
+            if result.status.value == DisplayResult.Status.SUCCESS.value:
                 st.info(response)
             else:
                 st.error(response)
-        elif result.display_format == DisplayResult.DisplayFormat.TABLE:
+        elif result.display_format.value == DisplayResult.DisplayFormat.TABLE.value:
             st.dataframe(response, use_container_width=True)
-        elif result.display_format == DisplayResult.DisplayFormat.JSON:
+        elif result.display_format.value == DisplayResult.DisplayFormat.JSON.value:
             st.json(response)
         else:
             if isinstance(response, dict) or isinstance(response, list):
                 st.dataframe(response, use_container_width=True)
             else:
-                if result.status == DisplayResult.Status.SUCCESS:
+                if result.status.value == DisplayResult.Status.SUCCESS.value:
                     st.info(response)
                 else:
                     st.error(response)
 
 
-def get_color(label):
+def get_color(label: str) -> str:
+    """Returns the display color for the label
+
+    Args:
+        label (str): The label
+
+    Returns:
+        str: The display color
+    """
     match label:
         case "Vulnerability":
             return "red"
@@ -58,7 +73,16 @@ def get_color(label):
             return "grey"
 
 
-def get_id(label, n):
+def get_id(label: str, n: dict) -> str:
+    """Returns the appropriate display text
+
+    Args:
+        label (str): The label
+        n (dict): The node
+
+    Returns:
+        str: The display text
+    """
     match label:
         case "Vulnerability":
             return f"Vulnerability: {n['~properties']['id']}"
@@ -66,7 +90,15 @@ def get_id(label, n):
             return n["~id"]
 
 
-def setup_graph(data):
+def setup_graph(data: List) -> cytoscape:
+    """Creates a Cytoscape graph given a set of nodes and edges
+
+    Args:
+        data (List): The nodes and edges
+
+    Returns:
+        cytoscape: A cytoscape graph
+    """
     elements = []
     for d in data:
         if "nodes" in d["res"] and not d["res"]["nodes"] is None:

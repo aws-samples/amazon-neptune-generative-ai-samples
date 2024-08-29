@@ -43,7 +43,8 @@ def run_query(prompt, index):
                     response = knowledge_graph_enhanced_rag.run_kgrag_answer_question(
                         prompt
                     )
-
+                if response.results:
+                    response.results += f"\n\n {index}"
                 create_display(response)
                 with st.popover("Evidence"):
                     st.write(response.explaination)

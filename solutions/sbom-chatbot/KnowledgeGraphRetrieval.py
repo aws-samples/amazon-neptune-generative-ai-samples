@@ -98,6 +98,7 @@ class KnowledgeGraphRetriever:
                 cypher_query = self.COMPONENT_EXPLAINABILITY_QUERY
             case "SHARED_COMPONENT_QUERY":
                 cypher_query = self.SHARED_COMPONENT_QUERY
+                response_format = DisplayResult.DisplayFormat.SUBGRAPH
             case _:
                 return DisplayResult(
                     "The question asked is not supported by this application, please rephrase the question and try again.",

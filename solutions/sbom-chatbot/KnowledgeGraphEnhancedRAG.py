@@ -83,7 +83,7 @@ class KnowledgeGraphEnhancedRAG:
                 "---------------------\n"
                 "Example:"
                 "Text: Amazon is located in Seattle."
-                "Triplets:\n(amazon, is located in, seattle)\n"
+                "Triplets:\n(amazon, located, seattle)\n"
                 "Text: Amazon will acquire Whole Foods Market for $42 per share.\n"
                 "Triplets:\n"
                 "(Amazon, acquires, Whole Foods Market)\n"
@@ -118,7 +118,7 @@ class KnowledgeGraphEnhancedRAG:
             logger.info("Loading KnowledgeGraphIndex from local complete")
 
     def run_kgrag_answer_question(self, question: str) -> DisplayResult:
-        """Runs the KnwoledgeGraph RAG Q/A
+        """Runs the KnowledgeGraph RAG Q/A
 
         Args:
             question (str): The question being asked
@@ -127,9 +127,9 @@ class KnowledgeGraphEnhancedRAG:
             DisplayResult: A DisplayResult of the response
         """
         response = self.kg_query_engine.query(question)
-        explaination = []
+        explanation = []
         for n in response.source_nodes:
-            explaination.append(
+            explanation.append(
                 {
                     "score": n.score,
                     "text": n.text,
@@ -138,7 +138,7 @@ class KnowledgeGraphEnhancedRAG:
             )
         return DisplayResult(
             response.response,
-            explaination=explaination,
+            explaination=explanation,
             display_format=DisplayResult.DisplayFormat.STRING,
             status=DisplayResult.Status.SUCCESS,
         )

@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class NaturalLanguageQuerying:
-    """Perform Natrual Language to OC query generation using Bedrock and LlamaIndex"""
+    """Perform Natural Language to OC query generation using Bedrock and LlamaIndex"""
 
     DEFAULT_RESPONSE_TEMPLATE = "Query:\n{query}\n\nResponse:\n{response}"
     DEFAULT_TEXT_TO_CYPHER_TEMPLATE = """Task:Generate Cypher statement to query a graph database.\nInstructions:\n

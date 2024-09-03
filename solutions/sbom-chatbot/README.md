@@ -41,6 +41,8 @@ For the GraphRAG cluster the user will need both [`ReadDataViaQuery`](https://do
 
 The application will also need IAM permissions to invoke the Bedrock API with the [`bedrock:InvokeModel`](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_InvokeModel.html) policy.
 
+Note: Within the library the `botocore` library is used to fetch the credentials used for the application.  If you are using an EC2 role this means that you will need to setup default region, and example of how this can be done is [here](https://stackoverflow.com/questions/40377662/boto3-client-noregionerror-you-must-specify-a-region-error-only-sometimes).
+
 
 ## Setup
 

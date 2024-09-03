@@ -62,7 +62,7 @@ llama-index-graph-stores-neptune==0.1.8
 llama-index-indices-managed-llama-cloud==0.2.7
 llama-index-legacy==0.9.48.post1
 llama-index-llms-anthropic==0.1.17
-llama-index-llms-bedrock==0.1.12
+llama-index-llms-bedrock==0.1.13
 llama-index-llms-openai==0.1.29
 llama-index-multi-modal-llms-openai==0.1.9
 llama-index-program-openai==0.1.7

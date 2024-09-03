@@ -4,12 +4,10 @@ This sample application was used as part of an [AWS On-Air segment](https://www.
 
 This repo contains a sample application built on Streamlit that shows how you can use Amazon Neptune with different Generative AI techniques to run:
 
-- Natural Language Queries (open world) - Using Amazon Bedrock Foundation models, your natural language
-  question will be converted into an openCypher query, which will then be run, and results returned.
-- Natural Language Queries (closed world) - Using Amazon Bedrock Foundation models, your natural language question will have the key entities extracted ,
-  which are then be run using templated queries, and results returned.
-- Knowledge Graph Enhanced RAG (GraphRAG) - Using Amazon Bedrock Foundation models, your natural language question will be answered using a combination of
-  Knowledge Graph queries and Vector similarity. This data will then be sent to the LLM for summarization and results returned.
+- Natural Language Queries (open world) - Using Amazon Bedrock Foundation models, your natural language question will be converted into an openCypher query, which will then be run, and results returned.
+- Natural Language Queries (closed world) - Using Amazon Bedrock Foundation models, your natural language question will have the key entities extracted , which are then be run using templated queries, and results returned.
+- Knowledge Graph Enhanced RAG (GraphRAG) - Using Amazon Bedrock Foundation models, your natural language question will be answered using a combination of Knowledge Graph queries and Vector similarity. This data will then be sent to the LLM for summarization and results returned.
+
 
 This iSBOM data for this application was created using the SBOM based dataset created using the notebook [here](https://github.com/aws/graph-notebook/blob/main/src/graph_notebook/notebooks/02-Neptune-Analytics/03-Sample-Use-Cases/03-Software-Bill-Of-Materials/02-SBOM-Vulnerability-Analysis.ipynb).
 
@@ -60,6 +58,9 @@ PORT = 8182
 LLM_MODEL="anthropic.claude-3-sonnet-20240229-v1:0"
 # The LLM used to compute embeddings and perform vector search.
 EMBEDDINGS_MODEL="amazon.titan-embed-text-v1"
+
+# Max number of triplets per chunk for the Knowledge Graph Index
+MAX_TRIPLETS_PER_CHUNK = 5
 ```
 
 ## Running the Application

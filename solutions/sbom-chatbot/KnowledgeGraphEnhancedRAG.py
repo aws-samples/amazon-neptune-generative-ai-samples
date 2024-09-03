@@ -37,6 +37,7 @@ class KnowledgeGraphEnhancedRAG:
         kg_graph_store: NeptuneDatabaseGraphStore,
         llm: Bedrock,
         embed_model: BedrockEmbedding,
+        max_triplets_per_chunk: int = 5,
     ):
         self.graph_store = graph_store
         self.kg_graph_store = kg_graph_store
@@ -52,6 +53,7 @@ class KnowledgeGraphEnhancedRAG:
             llm=llm,
         )
         self.vector_retriever = self.vector_index.as_retriever()
+        self.max_triplets_per_chunk = max_triplets_per_chunk
 
     def _load_kg_index(self) -> None:
         """Creates or loads the KG Index
@@ -94,10 +96,11 @@ class KnowledgeGraphEnhancedRAG:
             )
             template: PromptTemplate = PromptTemplate(text)
 
+            # This can take several (~3-5) minutes to create the graph from the documents in this example
             self.kg_index = KnowledgeGraphIndex.from_documents(
                 documents,
                 storage_context=kg_storage_context,
-                max_triplets_per_chunk=5,
+                max_triplets_per_chunk=self.max_triplets_per_chunk,
                 include_embeddings=True,
                 show_progress=True,
                 kg_triplet_extract_template=template,

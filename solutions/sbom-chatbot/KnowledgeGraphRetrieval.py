@@ -18,7 +18,16 @@ logger = logging.getLogger(__name__)
 
 class KnowledgeGraphRetriever:
     """This demonstrates how to run Knowledge Graph Retrieval queries using
-    the CypherTemplateRetriever and LlamaIndex
+    the CypherTemplateRetriever and LlamaIndex.  To use this with your own dataset
+    you will need to
+
+    * Modify the `ComponentParams` class to highlight the entities
+    you are looking to extract from the question
+    * Modify the queries below to be the proper templated queries you want to run
+    in your application.
+    * Modify the `run_retrieval_query` method  top change the `ChatMessage` prompt
+    to properly return the names of the acceptable queries to run and the MATCH
+    statement to perform the correct case matching logic
     """
 
     class ComponentParams(BaseModel):

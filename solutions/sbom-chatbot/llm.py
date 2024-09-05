@@ -55,7 +55,7 @@ kg_graph_store = NeptuneDatabaseGraphStore(
     host=kgrag_host, use_https=use_https, port=port
 )
 graphrag_store = NeptuneDatabasePropertyGraphStore(
-    host=graphrag_host, use_https=use_https, port=port
+    host=kgrag_host, use_https=use_https, port=port
 )
 
 

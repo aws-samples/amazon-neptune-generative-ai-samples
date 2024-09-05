@@ -43,6 +43,7 @@ class KnowledgeGraphEnhancedRAG:
         self.kg_graph_store = kg_graph_store
         self.llm = llm
         self.embed_model = embed_model
+        self.max_triplets_per_chunk = max_triplets_per_chunk
         self._load_kg_index()
         self._load_vector_index()
         self.kg_query_engine = self.kg_index.as_query_engine(
@@ -53,7 +54,6 @@ class KnowledgeGraphEnhancedRAG:
             llm=llm,
         )
         self.vector_retriever = self.vector_index.as_retriever()
-        self.max_triplets_per_chunk = max_triplets_per_chunk
 
     def _load_kg_index(self) -> None:
         """Creates or loads the KG Index

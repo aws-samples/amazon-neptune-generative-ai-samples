@@ -54,7 +54,7 @@ st.set_page_config(
 )
 
 st.title("Natural Language Query (Closed World)")
-st.write("""Often when working with """)
+st.write("""Using Amazon Bedrock Foundation models, intent and key entities are extracted from natural language questions, which are then used to run templated queries.""")
 
 # Setup columns for the two chatbots
 tab1, tab2, tab3 = st.tabs(["Chat", "Architecture", "Data Model"])

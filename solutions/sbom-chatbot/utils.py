@@ -91,7 +91,7 @@ def get_id(label: str, n: dict) -> str:
             return n["~id"]
 
 
-def setup_graph(data: List) -> cytoscape:
+def setup_graph(data: List) -> st_link_analysis:
     """Creates a Cytoscape graph given a set of nodes and edges
 
     Args:
@@ -118,7 +118,7 @@ def setup_graph(data: List) -> cytoscape:
 
         if "edges" in d["res"] and not d["res"]["edges"] is None:
             for e in d["res"]["edges"]:
-                elements.append(
+                edges_list.append(
                     {
                         "data": {
                             "id": e["~id"],
@@ -157,11 +157,11 @@ def setup_graph(data: List) -> cytoscape:
         EdgeStyle("REFERS_TO", labeled=True, directed=True),
     ]
 
-    if len(elements) > 0:
+    if len(nodes_list) > 0:
         return st_link_analysis(
             elements, node_styles=node_styles, edge_styles=edge_styles, layout="cose", key=key
         )
     else:
         return st.write(
-            "The question returned no answers.  Please try again with a different question/combination."
+            "No results were found. Please try again with a different question/combination."
         )

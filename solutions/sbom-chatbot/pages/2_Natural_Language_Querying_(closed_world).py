@@ -87,7 +87,7 @@ with st.sidebar:
     )
 
     sim_option = st.selectbox(
-        "Select a Library (Component):", ["libssl3", "openldap", "openjdk11-jre", "yum"]
+        "Select a Library (Component):", ["libssl3", "openldap", "openjdk11-jre", "yum", "python", "rpm"]
     )
 
     if st.button("Try it out", key="kg_queries"):

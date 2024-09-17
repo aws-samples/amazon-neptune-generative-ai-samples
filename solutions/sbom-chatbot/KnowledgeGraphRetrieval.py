@@ -105,6 +105,7 @@ class KnowledgeGraphRetriever:
                 response_format = DisplayResult.DisplayFormat.JSON
             case "COMPONENT_EXPLAINABILITY_QUERY":
                 cypher_query = self.COMPONENT_EXPLAINABILITY_QUERY
+                response_format = DisplayResult.DisplayFormat.TABLE
             case "SHARED_COMPONENT_QUERY":
                 cypher_query = self.SHARED_COMPONENT_QUERY
                 response_format = DisplayResult.DisplayFormat.SUBGRAPH

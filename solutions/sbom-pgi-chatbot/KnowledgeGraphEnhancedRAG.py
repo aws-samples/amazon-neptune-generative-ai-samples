@@ -42,6 +42,8 @@ class KnowledgeGraphEnhancedRAG:
         self.llm = llm
         self.embed_model = embed_model
         self.max_triplets_per_chunk = max_triplets_per_chunk
+        reader = SimpleDirectoryReader(input_dir="data/kg_enhanced_rag/")
+        self.documents = reader.load_data()
 
         self._load_pgi_index()
         self._load_vector_index()
@@ -65,15 +67,9 @@ class KnowledgeGraphEnhancedRAG:
             # load the documents and create the index
             logger.info("Creating PropertyGraphIndex from documents")
             storage_context = StorageContext.from_defaults(graph_store=self.graph_store)
-            parser = PDFReader()
-            file_extractor = {".pdf": parser}
-            reader = SimpleDirectoryReader(
-                input_dir="data/kg_enhanced_rag", file_extractor=file_extractor
-            )
-            documents = reader.load_data()
 
             self.pg_index = PropertyGraphIndex.from_documents(
-                documents,
+                self.documents,
                 property_graph_store=self.graph_store,
                 embed_kg_nodes=True,
                 llm=self.llm,
@@ -112,7 +108,9 @@ class KnowledgeGraphEnhancedRAG:
                     "score": n.score,
                     "text": n.text,
                     "file_name": n.metadata["file_name"],
-                    "page_label": n.metadata["page_label"],
+                    "page_label": (
+                        n.metadata["page_label"] if "page_label" in n.metadata else ""
+                    ),
                 }
             )
         return DisplayResult(
@@ -132,15 +130,9 @@ class KnowledgeGraphEnhancedRAG:
             # load the documents and create the index
             logger.info("Creating VectorStoreIndex from documents")
             storage_context = StorageContext.from_defaults(graph_store=self.graph_store)
-            parser = PDFReader()
-            file_extractor = {".pdf": parser}
-            reader = SimpleDirectoryReader(
-                input_dir="data/kg_enhanced_rag", file_extractor=file_extractor
-            )
-            documents = reader.load_data()
 
             self.vector_index = VectorStoreIndex.from_documents(
-                documents,
+                self.documents,
                 llm=self.llm,
                 embed_model=self.embed_model,
                 show_progress=True,
@@ -179,7 +171,9 @@ class KnowledgeGraphEnhancedRAG:
                     "score": n.score,
                     "text": n.text,
                     "file_name": n.metadata["file_name"],
-                    "page_label": n.metadata["page_label"],
+                    "page_label": (
+                        n.metadata["page_label"] if "page_label" in n.metadata else ""
+                    ),
                 }
             )
         return DisplayResult(

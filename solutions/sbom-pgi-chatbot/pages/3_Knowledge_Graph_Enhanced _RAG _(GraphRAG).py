@@ -108,12 +108,12 @@ with st.sidebar:
     kg_option = st.selectbox(
         "Select a Knowledge Graph Query to run:",
         (
-            "What is an SBOM?",
+            "My vendor isn't giving me an SBOM, what do I do now?",
             """
-            I have a supplier that is not providing me with SBOM data in a timely manner, provide me the reasoning and related documentation to go back to them and discuss why this is a requirement
+            I am adding a new software release to our deployment pipeline which is collecting SBOMs. Once I have an SBOM where do I store it?
             """,
             """
-            Provide a summary of the top 3 items I need to be concerned about with my SBOMs
+            My application uses a managed service, what are my requirements around having SBOM data for applications using this service?
             """,
         ),
     )

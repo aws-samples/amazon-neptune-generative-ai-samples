@@ -5,10 +5,7 @@ SPDX-License-Identifier: MIT-0
 
 from llama_index.llms.bedrock import Bedrock
 from llama_index.embeddings.bedrock import BedrockEmbedding
-from llama_index.graph_stores.neptune import (
-    NeptuneAnalyticsPropertyGraphStore,
-    NeptuneDatabasePropertyGraphStore,
-)
+from llama_index.graph_stores.neptune import NeptuneAnalyticsPropertyGraphStore
 from llama_index.core import PropertyGraphIndex, Settings
 import logging
 import os
@@ -17,7 +14,6 @@ from dotenv import load_dotenv
 from NaturalLanguageQuerying import NaturalLanguageQuerying
 from KnowledgeGraphEnhancedRAG import KnowledgeGraphEnhancedRAG
 from KnowledgeGraphRetrieval import KnowledgeGraphRetriever
-from llama_index.core.callbacks import CallbackManager, TokenCountingHandler
 
 
 # load the environment variables from .env file
@@ -28,15 +24,7 @@ vulnerability_list = None
 logging.basicConfig(level=logging.INFO)
 
 # Fetch configuration issues and set local variables to pass to the
-# The Cluster Endpoint for the SBOM natural language querying cluster
-kg_host: str = os.getenv("GRAPH_ENDPOINT")
-# The Cluster port for these clusters
-port: int = int(os.getenv("PORT", 8182))
-# The Cluster transport protocol for these clusters
-use_https = os.getenv("USE_HTTPS", "true").lower() in ("true", "1")
-graphrag_host: str = os.getenv("GRAPHRAG_HOST")
-# The max number of triples extracted per chunk for the GraphRAG KG Index
-max_triplets_per_chunk = os.getenv("MAX_TRIPLETS_PER_CHUNK", 5)
+host: str = os.getenv("HOST")
 
 # Setup the llm to use Bedrock and the provided model name
 llm = Bedrock(model=os.getenv("LLM_MODEL"), temperature=0)
@@ -48,8 +36,9 @@ embed_model = BedrockEmbedding(
 Settings.embed_model = embed_model
 
 # Create the the PropertyGraphStore and KG Graph Store to use the provided Neptune Database
-graph_store = NeptuneDatabasePropertyGraphStore(host=kg_host)
-graphrag_store = NeptuneAnalyticsPropertyGraphStore(graph_identifier=graphrag_host)
+graph_store = NeptuneAnalyticsPropertyGraphStore(
+    graph_identifier=host,
+)
 
 
 # Create the PropertyGraphIndex for the provided graph store, llm, and embedding model
@@ -74,10 +63,9 @@ def get_knowledge_graph_retriever():
 @st.cache_resource(show_spinner=False)
 def get_knowledge_graph_rag():
     return KnowledgeGraphEnhancedRAG(
-        graphrag_store,
+        graph_store,
         llm,
         embed_model,
-        max_triplets_per_chunk=max_triplets_per_chunk,
     )
 
 

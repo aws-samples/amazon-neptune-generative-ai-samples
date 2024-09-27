@@ -4,7 +4,6 @@ SPDX-License-Identifier: MIT-0
 """
 
 import streamlit as st
-import pandas as pd
 from llm import knowledge_graph_retreiver
 from utils import write_messages, create_display
 

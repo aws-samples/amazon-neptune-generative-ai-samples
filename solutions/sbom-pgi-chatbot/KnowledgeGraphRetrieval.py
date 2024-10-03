@@ -7,7 +7,7 @@ from DisplayResult import DisplayResult
 import logging
 import ast
 from typing import List
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from llama_index.core.indices.property_graph import CypherTemplateRetriever
 from llama_index.core.llms import ChatMessage
 from llama_index.core import PropertyGraphIndex

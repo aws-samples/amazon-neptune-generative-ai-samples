@@ -95,7 +95,7 @@ with tab2:
 
 with tab3:
     st.subheader("Graph Data Model")
-    st.image("images/triplet-data-model.png", use_column_width=True)
+    st.image("images/contextual-data-model.png", use_column_width=True)
 
 # React to user input
 if prompt := st.chat_input():

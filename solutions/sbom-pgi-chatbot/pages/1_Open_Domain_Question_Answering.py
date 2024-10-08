@@ -4,7 +4,7 @@ SPDX-License-Identifier: MIT-0
 """
 
 import streamlit as st
-from llm import natural_language_querying
+from llm import open_domain_qa
 from utils import write_messages, create_display
 
 # Store LLM generated responses
@@ -20,19 +20,29 @@ if "messages_nlq" not in st.session_state.keys():
 messages = st.session_state.messages_nlq
 
 
+if "summarize" not in st.session_state:
+    st.session_state.summarize = False
+
+
+def change_summarize():
+    st.session_state.summarize = False if st.session_state.summarize else True
+
+
 def run_query(prompt: str):
     messages.append({"role": "user", "content": prompt})
 
-    with tab1:
+    with chatbot_container:
         with st.chat_message("user"):
             st.write(prompt)
 
         with st.spinner(f"Executing using natural language query translation ..."):
             with st.chat_message("assistant"):
-                response = natural_language_querying.run_natural_language_query(prompt)
+                response = open_domain_qa.run_natural_language_query(
+                    prompt, st.session_state.summarize
+                )
                 create_display(response)
                 with st.popover("Query"):
-                    st.code(response.explaination)
+                    st.code(response.explanation)
                 messages.append(
                     {"role": "assistant", "content": response, "type": "table"}
                 )
@@ -44,23 +54,17 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("Natural Language Query")
+st.title("Open Domain Question Answering")
 st.write(
     """Using Amazon Bedrock Foundation models, your natural language 
     question will be converted into an openCypher query,
     which will then be run, and results returned."""
 )
 
-tab1, tab2, tab3 = st.tabs(["Chat", "Architecture", "Data Model"])
-with tab1:
+chatbot_container = st.container()
+with chatbot_container:
     # Setup the chat input
     write_messages(messages)
-
-with tab2:
-    st.image("images/nlq-open-world.png", use_column_width=True)
-
-with tab3:
-    st.image("images/schema.png", use_column_width=True)
 
 # React to user input
 if prompt := st.chat_input():
@@ -79,6 +83,8 @@ Group by component and severity count, order by component then by severity""",
             "Delete all data in the database    ",
         ),
     )
+
+    summarize = st.toggle("Summarize Response", value=False, on_change=change_summarize)
 
     if st.button("Try it out", key="kg_queries"):
         run_query(kg_option.replace("/n", ""))

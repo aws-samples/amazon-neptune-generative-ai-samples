@@ -20,16 +20,16 @@ class DisplayResult:
         ERROR = "error"
 
     results = None
-    explaination = None
+    explanation = None
 
     def __init__(
         self,
         results: Any,
-        explaination: Any = None,
+        explanation: Any = None,
         display_format: DisplayFormat = DisplayFormat.NOTSPECIFIED,
         status: Status = Status.SUCCESS,
     ):
         self.results = results
-        self.explaination = explaination
+        self.explanation = explanation
         self.display_format = display_format
         self.status = status

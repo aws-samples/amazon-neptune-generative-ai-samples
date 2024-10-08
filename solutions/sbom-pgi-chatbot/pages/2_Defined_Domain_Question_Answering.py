@@ -4,7 +4,7 @@ SPDX-License-Identifier: MIT-0
 """
 
 import streamlit as st
-from llm import knowledge_graph_retreiver
+from llm import defined_domain_qa
 from utils import write_messages, create_display
 
 # ------------------------------------------------------------------------
@@ -28,13 +28,13 @@ messages = st.session_state.messages_byokg
 def run_query(prompt):
     st.session_state.messages_byokg.append({"role": "user", "content": prompt})
 
-    with tab1:
+    with chatbot_container:
         with st.chat_message("user"):
             st.write(prompt)
 
         with st.spinner(f"Executing using graph retrieval queries ..."):
             with st.chat_message("assistant"):
-                response = knowledge_graph_retreiver.run_retrieval_query(prompt)
+                response = defined_domain_qa.run_retrieval_query(prompt)
                 create_display(response)
                 st.session_state.messages_byokg.append(
                     {"role": "assistant", "content": response, "type": "table"}
@@ -52,20 +52,17 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("Natural Language Query (Closed World)")
-st.write("""Often when working with """)
+st.title("Defined Domain Question Answering")
+st.write(
+    """Using Amazon Bedrock Foundation models, your natural language 
+    question will be reviewed to determine the intent, then the 
+    key entities are extracted, a templated openCypher query is executed, and results returned."""
+)
 
-# Setup columns for the two chatbots
-tab1, tab2, tab3 = st.tabs(["Chat", "Architecture", "Data Model"])
-with tab1:
+chatbot_container = st.container()
+with chatbot_container:
     # Setup the chat input
     write_messages(messages)
-
-with tab2:
-    st.image("images/nlq-closed-world.png", use_column_width=True)
-
-with tab3:
-    st.image("images/schema.png", use_column_width=True)
 
 # React to user input
 if prompt := st.chat_input():
@@ -86,7 +83,8 @@ with st.sidebar:
     )
 
     sim_option = st.selectbox(
-        "Select a Library (Component):", ["libssl3", "openldap", "openjdk11-jre", "yum"]
+        "Select a Library (Component):",
+        ["libssl3", "openldap", "openjdk11-jre", "yum", "python", "rpm"],
     )
 
     if st.button("Try it out", key="kg_queries"):

@@ -11,27 +11,25 @@ import logging
 import os
 import streamlit as st
 from dotenv import load_dotenv
-from NaturalLanguageQuerying import NaturalLanguageQuerying
-from KnowledgeGraphEnhancedRAG import KnowledgeGraphEnhancedRAG
-from KnowledgeGraphRetrieval import KnowledgeGraphRetriever
+from OpenDomainQA import OpenDomainQA
+from GraphEnhancedRAG import GraphEnhancedRAG
+from DefinedDomainQA import DefinedDomainQA
 
 
 # load the environment variables from .env file
 load_dotenv()
 
-vulnerability_list = None
-
-logging.basicConfig(level=logging.INFO)
-
 # Fetch configuration issues and set local variables to pass to the
 host: str = os.getenv("HOST")
 
 # Setup the llm to use Bedrock and the provided model name
-llm = Bedrock(model=os.getenv("LLM_MODEL"), temperature=0)
+llm = Bedrock(
+    model="anthropic.claude-3-sonnet-20240229-v1:0", temperature=0, context_size=200000
+)
 Settings.llm = llm
 # Setup the embedding model to use Bedrock and the provided model name
 embed_model = BedrockEmbedding(
-    model_name=os.getenv("EMBEDDINGS_MODEL"), additional_kwargs={"dimensions": 256}
+    model_name="amazon.titan-embed-text-v2:0", additional_kwargs={"dimensions": 256}
 )
 Settings.embed_model = embed_model
 
@@ -51,25 +49,21 @@ def get_pgi_from_existing():
 
 
 @st.cache_resource(show_spinner=False)
-def get_natural_language_querying():
-    return NaturalLanguageQuerying(index, llm)
+def get_open_domain_qa():
+    return OpenDomainQA(index)
 
 
 @st.cache_resource(show_spinner=False)
-def get_knowledge_graph_retriever():
-    return KnowledgeGraphRetriever(index, llm)
+def get_defined_domain_qa():
+    return DefinedDomainQA(index)
 
 
 @st.cache_resource(show_spinner=False)
-def get_knowledge_graph_rag():
-    return KnowledgeGraphEnhancedRAG(
-        graph_store,
-        llm,
-        embed_model,
-    )
+def get_graph_enhanced_rag():
+    return GraphEnhancedRAG(index)
 
 
 index = get_pgi_from_existing()
-natural_language_querying = get_natural_language_querying()
-knowledge_graph_retreiver = get_knowledge_graph_retriever()
-knowledge_graph_enhanced_rag = get_knowledge_graph_rag()
+open_domain_qa = get_open_domain_qa()
+defined_domain_qa = get_defined_domain_qa()
+graph_enhanced_rag = get_graph_enhanced_rag()

@@ -7,20 +7,11 @@ import logging
 import os
 from DisplayResult import DisplayResult
 from llama_index.core import SimpleDirectoryReader
-from llama_index.readers.file import PDFReader
-from llama_index.graph_stores.neptune import (
-    NeptuneDatabasePropertyGraphStore,
-    NeptuneDatabaseGraphStore,
-)
-from llama_index.llms.bedrock import Bedrock
-from llama_index.embeddings.bedrock import BedrockEmbedding
 from llama_index.core import (
     PropertyGraphIndex,
-    KnowledgeGraphIndex,
     VectorStoreIndex,
     StorageContext,
     load_index_from_storage,
-    PromptTemplate,
 )
 
 PERSIST_DIR = "persist/"
@@ -28,20 +19,14 @@ PERSIST_DIR = "persist/"
 logger = logging.getLogger(__name__)
 
 
-class KnowledgeGraphEnhancedRAG:
+class GraphEnhancedRAG:
     """This class shows how to run a PropertyGraphIndex query over data using LlamaIndex"""
 
     def __init__(
         self,
-        graph_store: NeptuneDatabasePropertyGraphStore,
-        llm: Bedrock,
-        embed_model: BedrockEmbedding,
-        max_triplets_per_chunk: int = 5,
+        index: PropertyGraphIndex,
     ):
-        self.graph_store = graph_store
-        self.llm = llm
-        self.embed_model = embed_model
-        self.max_triplets_per_chunk = max_triplets_per_chunk
+        self.index = index
         reader = SimpleDirectoryReader(input_dir="data/kg_enhanced_rag/")
         self.documents = reader.load_data()
 
@@ -49,31 +34,28 @@ class KnowledgeGraphEnhancedRAG:
         self._load_vector_index()
         self.pg_query_engine = self.pg_index.as_query_engine(
             include_text=True,
-            llm=llm,
         )
-        self.vector_query_engine = self.vector_index.as_query_engine(
-            llm=llm,
-        )
+        self.vector_query_engine = self.vector_index.as_query_engine()
         self.vector_retriever = self.vector_index.as_retriever()
 
     def _load_pgi_index(self) -> None:
-        """Creates or loads the PG Index
+        """Creates or loads the PropertyGraphIndex
 
         Returns:
-            The loaded PG Index
+            The loaded PropertyGraphIndex
         """
         # check if kg storage already exists
         if not os.path.exists(PERSIST_DIR + "/pgi"):
             # load the documents and create the index
             logger.info("Creating PropertyGraphIndex from documents")
-            storage_context = StorageContext.from_defaults(graph_store=self.graph_store)
+            storage_context = StorageContext.from_defaults(
+                graph_store=self.index.property_graph_store
+            )
 
-            self.pg_index = PropertyGraphIndex.from_documents(
+            self.pg_index = self.index.from_documents(
                 self.documents,
-                property_graph_store=self.graph_store,
+                property_graph_store=self.index.property_graph_store,
                 embed_kg_nodes=True,
-                llm=self.llm,
-                embed_model=self.embed_model,
                 show_progress=True,
             )
 
@@ -86,7 +68,7 @@ class KnowledgeGraphEnhancedRAG:
             logger.info("Loading PropertyGraphIndex from local")
             storage_context = StorageContext.from_defaults(
                 persist_dir=PERSIST_DIR + "/pgi",
-                property_graph_store=self.graph_store,
+                property_graph_store=self.index.property_graph_store,
             )
             self.pg_index = load_index_from_storage(storage_context)
             logger.info("Loading PropertyGraphIndex from local complete")
@@ -101,9 +83,9 @@ class KnowledgeGraphEnhancedRAG:
             DisplayResult: A DisplayResult of the response
         """
         response = self.pg_query_engine.query(question)
-        explaination = []
+        explanation = []
         for n in response.source_nodes:
-            explaination.append(
+            explanation.append(
                 {
                     "score": n.score,
                     "text": n.text,
@@ -115,7 +97,7 @@ class KnowledgeGraphEnhancedRAG:
             )
         return DisplayResult(
             response.response,
-            explaination=explaination,
+            explanation=explanation,
             display_format=DisplayResult.DisplayFormat.STRING,
         )
 
@@ -129,12 +111,12 @@ class KnowledgeGraphEnhancedRAG:
         if not os.path.exists(PERSIST_DIR + "/vector"):
             # load the documents and create the index
             logger.info("Creating VectorStoreIndex from documents")
-            storage_context = StorageContext.from_defaults(graph_store=self.graph_store)
+            storage_context = StorageContext.from_defaults(
+                graph_store=self.index.property_graph_store
+            )
 
             self.vector_index = VectorStoreIndex.from_documents(
                 self.documents,
-                llm=self.llm,
-                embed_model=self.embed_model,
                 show_progress=True,
             )
 
@@ -149,7 +131,7 @@ class KnowledgeGraphEnhancedRAG:
             logger.info("Loading VectorStoreIndex from local")
             storage_context = StorageContext.from_defaults(
                 persist_dir=PERSIST_DIR + "/vector",
-                property_graph_store=self.graph_store,
+                property_graph_store=self.index.property_graph_store,
             )
             self.vector_index = load_index_from_storage(storage_context)
             logger.info("Loading VectorStoreIndex from local complete")
@@ -164,9 +146,9 @@ class KnowledgeGraphEnhancedRAG:
             DisplayResult: A DisplayResult of the response
         """
         response = self.vector_query_engine.query(question)
-        explaination = []
+        explanation = []
         for n in response.source_nodes:
-            explaination.append(
+            explanation.append(
                 {
                     "score": n.score,
                     "text": n.text,
@@ -178,7 +160,7 @@ class KnowledgeGraphEnhancedRAG:
             )
         return DisplayResult(
             response.response,
-            explaination=explaination,
+            explanation=explanation,
             display_format=DisplayResult.DisplayFormat.STRING,
             status=DisplayResult.Status.SUCCESS,
         )

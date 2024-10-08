@@ -9,14 +9,13 @@ import ast
 from typing import List
 from pydantic import BaseModel, Field
 from llama_index.core.indices.property_graph import CypherTemplateRetriever
-from llama_index.core.llms import ChatMessage
-from llama_index.core import PropertyGraphIndex
-from llama_index.llms.bedrock import Bedrock
+from llama_index.core import PropertyGraphIndex, Settings
+from llama_index.core.prompts import PromptTemplate
 
 logger = logging.getLogger(__name__)
 
 
-class KnowledgeGraphRetriever:
+class DefinedDomainQA:
     """This demonstrates how to run Knowledge Graph Retrieval queries using
     the CypherTemplateRetriever and LlamaIndex.  To use this with your own dataset
     you will need to
@@ -44,7 +43,7 @@ class KnowledgeGraphRetriever:
     RETURN c as component
     """
 
-    COMPONENT_EXPLAINABILITY_QUERY: str = """
+    COMPONENT_NEIGHBORHOOD_QUERY: str = """
         MATCH p=(d)-[]-(c:Component {name:  $component_name})-[]-(noe:Vulnerability)
         RETURN id(d) as document_id, noe.id as vulnerability_id, noe.`ratings.severity` as severity, noe.`source.url` as reference
         ORDER by severity, document_id
@@ -64,9 +63,30 @@ class KnowledgeGraphRetriever:
         MATCH (c:Component) WHERE exists(c.name) RETURN c.name as name ORDER BY c.name
     """
 
-    def __init__(self, index: PropertyGraphIndex, llm: Bedrock):
+    INTENT_TEMPLATE = PromptTemplate(
+        """You’re a LLM that detects intent from user questions for an application. 
+            Your task is to classify the user's intent based on their questions. 
+            Question:
+            {question}
+
+            Below are the possible intent name, followed by a colon, then brief descriptions. 
+
+            - COMPONENT_QUERY: Find information about a specific component
+
+            - COMPONENT_NEIGHBORHOOD_QUERY: Find information about vulnerabilities and documents connected to a component
+            
+            - SHARED_COMPONENT_QUERY: Find information about shared components across documents
+
+            - UNKNOWN: Choose this if the query doesn’t fall into any of the other intents.
+                
+            Use these to accurately determine the user's goal, and output only the intent name.
+            Do not provide any additional context or explanation.
+            Component and Library are used as synonyms
+            """
+    )
+
+    def __init__(self, index: PropertyGraphIndex):
         self.index = index
-        self.llm = llm
         self.graph_store = index.property_graph_store
         self.component_list = self._get_component_list()
 
@@ -79,32 +99,19 @@ class KnowledgeGraphRetriever:
         Returns:
             DisplayResult: A DisplayResult containing the formatted results
         """
-        messages = [
-            ChatMessage(
-                role="system",
-                content="""You are an expert in Software Bill of Materials  
-                Given the question below, determine if the users intent is to:
-                
-                * Find information about a specific component, if so return only the word COMPONENT_QUERY
-                * Find information about a component and its vulnerabiltiies, if so return only the word COMPONENT_EXPLAINABILITY_QUERY
-                * Find information about shared components across documents, if so return only the word  SHARED_COMPONENT_QUERY
-                * If it is none of these return only the word UNKNOWN
-                Do not provide any additional context or explaination.
-                Component and Library are used as synonyms
-                """,
-            ),
-            ChatMessage(role="user", content=prompt),
-        ]
-        resp = self.llm.chat(messages)
+        resp = Settings.llm.predict(
+            self.INTENT_TEMPLATE,
+            question=prompt,
+        )
         logger.info(resp)
         cypher_query = ""
         response_format = DisplayResult.DisplayFormat.TABLE
-        match resp.message.content:
+        match resp:
             case "COMPONENT_QUERY":
                 cypher_query = self.COMPONENT_QUERY
                 response_format = DisplayResult.DisplayFormat.JSON
-            case "COMPONENT_EXPLAINABILITY_QUERY":
-                cypher_query = self.COMPONENT_EXPLAINABILITY_QUERY
+            case "COMPONENT_NEIGHBORHOOD_QUERY":
+                cypher_query = self.COMPONENT_NEIGHBORHOOD_QUERY
             case "SHARED_COMPONENT_QUERY":
                 cypher_query = self.SHARED_COMPONENT_QUERY
                 response_format = DisplayResult.DisplayFormat.SUBGRAPH

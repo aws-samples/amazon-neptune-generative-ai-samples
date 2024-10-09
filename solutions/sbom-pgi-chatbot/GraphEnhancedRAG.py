@@ -6,7 +6,6 @@ SPDX-License-Identifier: MIT-0
 import logging
 import os
 from DisplayResult import DisplayResult
-from llama_index.core import SimpleDirectoryReader
 from llama_index.core import (
     PropertyGraphIndex,
     VectorStoreIndex,
@@ -27,8 +26,6 @@ class GraphEnhancedRAG:
         index: PropertyGraphIndex,
     ):
         self.index = index
-        reader = SimpleDirectoryReader(input_dir="data/kg_enhanced_rag/")
-        self.documents = reader.load_data()
 
         self._load_pgi_index()
         self._load_vector_index()
@@ -39,42 +36,22 @@ class GraphEnhancedRAG:
         self.vector_retriever = self.vector_index.as_retriever()
 
     def _load_pgi_index(self) -> None:
-        """Creates or loads the PropertyGraphIndex
+        """Loads and existing PropertyGraphIndex
 
         Returns:
             The loaded PropertyGraphIndex
         """
-        # check if kg storage already exists
-        if not os.path.exists(PERSIST_DIR + "/pgi"):
-            # load the documents and create the index
-            logger.info("Creating PropertyGraphIndex from documents")
-            storage_context = StorageContext.from_defaults(
-                graph_store=self.index.property_graph_store
-            )
-
-            self.pg_index = self.index.from_documents(
-                self.documents,
-                property_graph_store=self.index.property_graph_store,
-                embed_kg_nodes=True,
-                show_progress=True,
-            )
-
-            # persistent storage
-            self.pg_index.storage_context.persist(persist_dir=PERSIST_DIR + "/pgi")
-
-            logger.info("Creation of PropertyGraphIndex from documents complete")
-        else:
-            # load the existing index
-            logger.info("Loading PropertyGraphIndex from local")
-            storage_context = StorageContext.from_defaults(
-                persist_dir=PERSIST_DIR + "/pgi",
-                property_graph_store=self.index.property_graph_store,
-            )
-            self.pg_index = load_index_from_storage(storage_context)
-            logger.info("Loading PropertyGraphIndex from local complete")
+        # load the existing index
+        logger.info("Loading PropertyGraphIndex from local")
+        storage_context = StorageContext.from_defaults(
+            persist_dir=PERSIST_DIR + "/pgi",
+            property_graph_store=self.index.property_graph_store,
+        )
+        self.pg_index = load_index_from_storage(storage_context)
+        logger.info("Loading PropertyGraphIndex from local complete")
 
     def run_graphrag_answer_question(self, question: str) -> DisplayResult:
-        """Runs the GraphRAG Q/A
+        """Runs the Graph Enhanced Q/A
 
         Args:
             question (str): The question being asked
@@ -102,39 +79,19 @@ class GraphEnhancedRAG:
         )
 
     def _load_vector_index(self) -> None:
-        """Creates or loads the Vector Index
+        """Loads and existing VectorSearchIndex
 
         Returns:
-            The loaded Vector Index
+            The loaded VectorSearchIndex
         """
-        # check if kg storage already exists
-        if not os.path.exists(PERSIST_DIR + "/vector"):
-            # load the documents and create the index
-            logger.info("Creating VectorStoreIndex from documents")
-            storage_context = StorageContext.from_defaults(
-                graph_store=self.index.property_graph_store
-            )
-
-            self.vector_index = VectorStoreIndex.from_documents(
-                self.documents,
-                show_progress=True,
-            )
-
-            # persistent storage
-            self.vector_index.storage_context.persist(
-                persist_dir=PERSIST_DIR + "/vector"
-            )
-
-            logger.info("Creation of VectorStoreIndex from documents complete")
-        else:
-            # load the existing index
-            logger.info("Loading VectorStoreIndex from local")
-            storage_context = StorageContext.from_defaults(
-                persist_dir=PERSIST_DIR + "/vector",
-                property_graph_store=self.index.property_graph_store,
-            )
-            self.vector_index = load_index_from_storage(storage_context)
-            logger.info("Loading VectorStoreIndex from local complete")
+        # load the existing index
+        logger.info("Loading VectorStoreIndex from local")
+        storage_context = StorageContext.from_defaults(
+            persist_dir=PERSIST_DIR + "/vector",
+            property_graph_store=self.index.property_graph_store,
+        )
+        self.vector_index = load_index_from_storage(storage_context)
+        logger.info("Loading VectorStoreIndex from local complete")
 
     def run_vector_answer_question(self, question: str) -> DisplayResult:
         """Runs the Vector RAG Q/A

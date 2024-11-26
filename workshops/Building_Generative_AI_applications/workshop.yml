@@ -1,0 +1,20 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create a new instance of the resources required for the KnowledgeCon 2024 workshop
+
+Resources:
+  Workshop:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://aws-neptune-customer-samples-us-west-2.s3.us-west-2.amazonaws.com/workshops/building_genai_apps_using_neptune/CF/workshop.yaml
+      Parameters:
+        MyAssetsBucketName: aws-neptune-customer-samples-us-west-2
+        MyAssetsBucketPrefix: workshops/building_genai_apps_using_neptune/
+
+Outputs:
+  StreamlitEndpoint:
+    Description: Streamlit App URL
+    Value: !GetAtt Workshop.Outputs.StreamlitEndpoint
+
+  NotebookInstance:
+    Description: The SageMaker Notebook Instance
+    Value: !GetAtt Workshop.Outputs.NotebookInstance

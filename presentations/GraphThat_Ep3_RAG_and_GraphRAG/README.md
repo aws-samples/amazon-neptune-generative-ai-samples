@@ -1,0 +1,3 @@
+# Unlocking data for GenAI using Graph Databases
+
+This folder contains the notebook displayed in the YouTube video series [#GraphThat Episode 3](https://www.youtube.com/watch?v=TWuqFzCQ9iw) on the [Amazon Web Services](https://www.youtube.com/@amazonwebservices) channel.  This notebook is being shared as a convenience upon being requested and is intended for demonstration purposes only. Please add an issue to the GitHub repository to report issues or update requests, but no warranty or commitments to updating the contents is provided.

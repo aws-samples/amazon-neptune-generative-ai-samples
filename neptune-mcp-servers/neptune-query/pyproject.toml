@@ -1,0 +1,13 @@
+[project]
+name = "neptune-query"
+version = "0.1.0"
+description = "This is an MCP server that allows users to query Amazon Neptune Database or Analytics usign Gremlin or openCypher"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "langchain-aws>=0.2.19",
+    "mcp[cli]>=1.6.0",
+]
+
+[tool.setuptools]
+py-modules = []

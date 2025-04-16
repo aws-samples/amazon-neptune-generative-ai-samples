@@ -36,7 +36,7 @@ graph = NeptuneServer(endpoint, use_https=use_https)
 
 
 mcp = FastMCP(
-    "aws-samples.neptune-mcp-servers.neptune-query",
+    "Neptune Query",
     instructions="""
     This provides access to an Amazon Neptune graph for running data queries.
 
@@ -51,13 +51,26 @@ mcp = FastMCP(
     ]
 )
 
-@mcp.resource(uri="resource://status", name='GraphStatus', mime_type='application/text')
-def get_status() -> str:
-    """Get the statusof the currently configured graph"""
+@mcp.resource(uri="amazon-neptune://status", name='GraphStatus', mime_type='application/text')
+def get_status_resource() -> str:
+    """Get the status of the currently configured Amazon Neptune graph"""
     return graph.status()
 
 
-@mcp.resource(uri="resource://schema", name='GraphSchema', mime_type='application/text')
+@mcp.resource(uri="amazon-neptune://schema", name='GraphSchema', mime_type='application/text')
+def get_schema_resource() -> str:
+    """Get the schema for the graph including the vertex and edge labels as well as the
+    (vertex)-[edge]->(vertex) combinations.
+    """
+    return graph.schema()
+
+@mcp.tool(name="get_graph_status")
+def get_status() -> str:
+    """Get the status of the currently configured Amazon Neptune graph"""
+    return graph.status()
+
+
+@mcp.tool(name="get_graph_schema")
 def get_schema() -> str:
     """Get the schema for the graph including the vertex and edge labels as well as the
     (vertex)-[edge]->(vertex) combinations.
@@ -65,7 +78,7 @@ def get_schema() -> str:
     return graph.schema()
 
 
-@mcp.tool()
+@mcp.tool(name='run_query')
 def run_query(query: str, language:QueryLanguage, parameters:Dict = None) -> Dict:
     """Executes an openCypher or Gremlin query (as specified) against the graph"""
     return graph.query(query, language, parameters)

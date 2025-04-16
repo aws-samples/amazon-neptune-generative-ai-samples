@@ -1,7 +1,0 @@
-README.md
-pyproject.toml
-neptune_query.egg-info/PKG-INFO
-neptune_query.egg-info/SOURCES.txt
-neptune_query.egg-info/dependency_links.txt
-neptune_query.egg-info/requires.txt
-neptune_query.egg-info/top_level.txt

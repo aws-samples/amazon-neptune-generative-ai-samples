@@ -1,2 +1,0 @@
-langchain-aws>=0.2.19
-mcp[cli]>=1.6.0

@@ -15,8 +15,8 @@ from langchain_aws.graphs import NeptuneGraph, NeptuneAnalyticsGraph
 from enum import Enum
 import logging
 import json
-import re
-from models import QueryLanguage
+from dataclasses import asdict
+from models import *
 
 
 class EngineType(Enum):
@@ -70,11 +70,15 @@ class NeptuneServer:
         except Exception:
             return "Unavailabe"
 
-    def schema(self) -> str:
-        if self._engine_type == EngineType.UNKNOWN:
-            raise AttributeError("Engine type is unknown so we cannot fetch the schema")
-
-        return self.graph.schema
+    def schema(self) -> GraphSchema:
+        match self._engine_type:
+            case EngineType.DATABASE:
+                return self._schema_database()
+            case EngineType.ANALYTICS:
+                return self._schema_analytics()
+            case __:
+                raise AttributeError("Engine type is unknown so we cannot fetch the schema")
+            
 
     def query(self, query: str, language: QueryLanguage, parameters: map = None) -> str:
         if self._engine_type == EngineType.DATABASE:
@@ -136,3 +140,83 @@ class NeptuneServer:
         except Exception as e:
             self._logger.debug(e)
             raise e
+        
+        
+    def _schema_analytics(self) -> GraphSchema:
+        """
+        Retrives the Neptune graph schema information and returns a GraphSchema object.
+        """
+        pg_schema_query = """
+        CALL neptune.graph.pg_schema() 
+        YIELD schema
+        RETURN schema
+        """
+
+        data = json.loads(self.query(pg_schema_query, language=QueryLanguage.OPEN_CYPHER))
+        raw_schema = data['results'][0]["schema"]
+        graph = GraphSchema(nodes=[], relationships=[], relationship_patterns=[])
+        for i in raw_schema["labelTriples"]:
+            graph.relationship_patterns.append(RelationshipPattern(left_node=i['~from'], relation=i['~type'], right_node=i['~to']))
+        
+        for l in raw_schema["nodeLabels"]:
+            details = raw_schema["nodeLabelDetails"][l]
+            props=[]
+            for p in details["properties"]:
+                props.append(Property(name=p, type=details["properties"][p]['datatypes']))
+            graph.nodes.append(Node(labels=l, properties=props))
+        
+        for l in raw_schema["edgeLabels"]:
+            details = raw_schema["edgeLabelDetails"][l]
+            props=[]
+            for p in details["properties"]:
+                props.append(Property(name=p, type=details["properties"][p]['datatypes']))
+            graph.relationships.append(Relationship(type=l, properties=props))
+
+        return asdict(graph)
+
+
+
+    def _schema_database(self) -> GraphSchema:
+        """
+        Retrives the Neptune database schema information and returns a GraphSchema object.
+        """
+        types = {
+            "str": "STRING",
+            "float": "DOUBLE",
+            "int": "INTEGER",
+            "list": "LIST",
+            "dict": "MAP",
+            "bool": "BOOLEAN",
+        }
+        
+        n_labels, e_labels = self.graph._get_labels()
+        triple_schema = self.graph._get_triples(e_labels)
+        node_properties = self.graph._get_node_properties(n_labels, types)
+        edge_properties = self.graph._get_edge_properties(e_labels, types)
+
+        graph = GraphSchema(nodes=[], relationships=[], relationship_patterns=[])
+        for i in triple_schema:
+            i = (
+                i.replace("(:`", "")
+                .replace("`)", "")
+                .replace("[:`", "")
+                .replace("`]", "")
+                .replace(">", "")
+            )
+            parts = i.split("-")
+            graph.relationship_patterns.append(RelationshipPattern(left_node=parts[0], relation=parts[1], right_node=parts[2]))
+        
+        for i in node_properties:            
+            props=[]
+            for p in i["properties"]:
+                props.append(Property(name=p['property'], type=p['type']))
+            graph.nodes.append(Node(labels=i['labels'], properties=props))
+        
+        for i in edge_properties:
+            props=[]
+            for p in i["properties"]:
+                props.append(Property(name=p['property'], type=p['type']))
+            graph.relationships.append(Relationship(type=i['type'], properties=props))
+
+        return asdict(graph)
+

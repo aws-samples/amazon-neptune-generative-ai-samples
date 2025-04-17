@@ -13,7 +13,36 @@
 
 from enum import Enum
 from dataclasses import dataclass
+from typing import List
 
 class QueryLanguage(Enum):
     OPEN_CYPHER = 'OPEN_CYPHER'
     GREMLIN = 'GREMLIN'
+
+@dataclass
+class Property:
+    name: str
+    type: str
+
+@dataclass
+class Node:
+    labels: str
+    properties: List[Property]
+
+@dataclass
+class Relationship:
+    type: str
+    properties: List[Property]
+
+
+@dataclass
+class RelationshipPattern:
+    left_node: str
+    right_node: str
+    relation: str
+
+@dataclass
+class GraphSchema:
+    nodes: List[Node]
+    relationships: List[Relationship]
+    relationship_patterns: List[RelationshipPattern]

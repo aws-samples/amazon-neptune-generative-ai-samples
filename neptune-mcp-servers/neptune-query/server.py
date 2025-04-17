@@ -12,16 +12,12 @@
 #
 
 from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp.server import Context
 import os
 import argparse
 
-from contextlib import asynccontextmanager
-from collections.abc import AsyncIterator
-from dataclasses import dataclass
 from neptune import NeptuneServer
 import logging
-from models import QueryLanguage
+from models import QueryLanguage, GraphSchema
 from typing import Dict
 
 logger = logging.getLogger(__name__)
@@ -58,7 +54,7 @@ def get_status_resource() -> str:
 
 
 @mcp.resource(uri="amazon-neptune://schema", name='GraphSchema', mime_type='application/text')
-def get_schema_resource() -> str:
+def get_schema_resource() -> GraphSchema:
     """Get the schema for the graph including the vertex and edge labels as well as the
     (vertex)-[edge]->(vertex) combinations.
     """
@@ -71,7 +67,7 @@ def get_status() -> str:
 
 
 @mcp.tool(name="get_graph_schema")
-def get_schema() -> str:
+def get_schema() -> GraphSchema:
     """Get the schema for the graph including the vertex and edge labels as well as the
     (vertex)-[edge]->(vertex) combinations.
     """
@@ -82,12 +78,6 @@ def get_schema() -> str:
 def run_query(query: str, language:QueryLanguage, parameters:Dict = None) -> Dict:
     """Executes an openCypher or Gremlin query (as specified) against the graph"""
     return graph.query(query, language, parameters)
-
-
-@mcp.prompt()
-def echo_prompt(message: str) -> str:
-    """Create an echo prompt"""
-    return f"Please process this message: {message}"
 
 
 def main():

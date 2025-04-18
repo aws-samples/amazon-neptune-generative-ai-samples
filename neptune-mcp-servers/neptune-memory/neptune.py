@@ -67,7 +67,7 @@ class NeptuneServer:
         try:
             self.query("RETURN 1", QueryLanguage.OPEN_CYPHER)
             return "Available"
-        except Exception:
+        except Exception as e:
             return "Unavailabe"
 
     def schema(self) -> GraphSchema:

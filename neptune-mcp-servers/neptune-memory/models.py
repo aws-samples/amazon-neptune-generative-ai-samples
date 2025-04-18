@@ -15,23 +15,19 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import List
 
-
 class QueryLanguage(Enum):
-    OPEN_CYPHER = "OPEN_CYPHER"
-    GREMLIN = "GREMLIN"
-
+    OPEN_CYPHER = 'OPEN_CYPHER'
+    GREMLIN = 'GREMLIN'
 
 @dataclass
 class Property:
     name: str
     type: str
 
-
 @dataclass
 class Node:
     labels: str
     properties: List[Property]
-
 
 @dataclass
 class Relationship:
@@ -45,9 +41,31 @@ class RelationshipPattern:
     right_node: str
     relation: str
 
-
 @dataclass
 class GraphSchema:
     nodes: List[Node]
     relationships: List[Relationship]
     relationship_patterns: List[RelationshipPattern]
+
+# Models for our knowledge graph
+@dataclass
+class Entity():
+    name: str
+    type: str
+    observations: List[str]
+
+@dataclass
+class Relation():
+    source: str
+    target: str
+    relationType: str
+
+@dataclass
+class KnowledgeGraph():
+    entities: List[Entity]
+    relations: List[Relation]
+
+@dataclass
+class Observation():
+    entityName: str
+    contents: List[str]

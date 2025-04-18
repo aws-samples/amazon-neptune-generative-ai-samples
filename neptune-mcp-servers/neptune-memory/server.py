@@ -34,7 +34,7 @@ memory = KnowledgeGraphManager(graph, logger)
 
 
 mcp = FastMCP(
-    "Neptune Memory",
+    "Memory",
     instructions="""
     This provides access to a memory for an agentic workflow stored in Amazon Neptune graph.
     """,
@@ -44,22 +44,9 @@ mcp = FastMCP(
     ]
 )
 
-@mcp.resource(uri="amazon-neptune://status", name='GraphStatus', mime_type='application/text')
-def get_status_resource() -> str:
-    """Get the status of the currently configured Amazon Neptune graph"""
-    return graph.status()
-
-
-@mcp.resource(uri="amazon-neptune://schema", name='GraphSchema', mime_type='application/text')
-def get_schema_resource() -> GraphSchema:
-    """Get the schema for the graph including the vertex and edge labels as well as the
-    (vertex)-[edge]->(vertex) combinations.
-    """
-    return graph.schema()
-
-@mcp.tool(name="get_graph_status")
+@mcp.tool(name="get_memory_server_status")
 def get_status() -> str:
-    """Get the status of the currently configured Amazon Neptune graph"""
+    """Get the status of the currently configured Amazon Neptune memory server"""
     return graph.status()
 
 
@@ -75,13 +62,14 @@ def create_relations(relations: List[Relation]) -> str:
     return memory.create_relations(relations)
 
 
-@mcp.tool(name="read_graph",
-        description="Read the entire knowledge graph")
+@mcp.tool(name="read_memory",
+        description="Read the memory knowledge graph")
 def read_graph() -> KnowledgeGraph:
     return memory.read_graph()
 
 
-@mcp.tool()
+@mcp.tool(name="search_memory",
+        description="Search the memory knowledge graph for a specific entity name")
 def search_graph(query: str) -> KnowledgeGraph:
     return memory.search_nodes(query)
 

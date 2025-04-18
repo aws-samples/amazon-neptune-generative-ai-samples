@@ -24,11 +24,11 @@ from typing import List
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-endpoint = os.environ.get("NEPTUNE_ENDPOINT", None)
-use_https = os.environ.get("NEPTUNE_USE_HTTPS", 'True').lower() in ('true', '1', 't')
-logger.info(f"NEPTUNE_ENDPOINT: {endpoint}")
+endpoint = os.environ.get("NEPTUNE_MEMORY_ENDPOINT", None)
+use_https = os.environ.get("NEPTUNE_MEMORY_USE_HTTPS", 'True').lower() in ('true', '1', 't')
+logger.info(f"NEPTUNE_MEMORY_ENDPOINT: {endpoint}")
 if endpoint is None:
-    raise ValueError("NEPTUNE_ENDPOINT environment variable is not set")
+    raise ValueError("NEPTUNE_MEMORY_ENDPOINT environment variable is not set")
 graph = NeptuneServer(endpoint, use_https=use_https)
 memory = KnowledgeGraphManager(graph, logger)
 
@@ -62,13 +62,6 @@ def get_status() -> str:
     """Get the status of the currently configured Amazon Neptune graph"""
     return graph.status()
 
-
-@mcp.tool(name="get_graph_schema")
-def get_schema() -> GraphSchema:
-    """Get the schema for the graph including the vertex and edge labels as well as the
-    (vertex)-[edge]->(vertex) combinations.
-    """
-    return graph.schema()
 
 @mcp.tool(name="create_entities",
         description="Create multiple new entities in the knowledge graph")

@@ -2,19 +2,16 @@
 
 Model Context Protocol (MCP) server for running queries against Amazon Neptune
 
-This MCP server aloows you to run Gremlin and openCypher queries against a Neptune Database or openCypher queries against a Neptune Analytics dataabase.
-
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
+This MCP server allows you to run Gremlin and openCypher queries against a Neptune Database or openCypher queries against a Neptune Analytics dataabase.
 
 ## Prerequisites
 
 1. Install `uv` from [Astral](https://docs.astral.sh/uv/getting-started/installation/) or the [GitHub README](https://github.com/astral-sh/uv#installation)
-2. Install Python using `uv python install 3.10`
-3. Install GraphViz https://www.graphviz.org/
-
+2. Install Python using `uv python install 3.12`
 ## Installation
 
-Here are some ways you can work with MCP across AWS, and we'll be adding support to more products including Amazon Q Developer CLI soon: (e.g. for Amazon Q Developer CLI MCP, `~/.aws/amazonq/mcp.json`):
+Here are some ways you can work with MCP clients.
+
 
 ```json
 {
@@ -24,7 +21,7 @@ Here are some ways you can work with MCP across AWS, and we'll be adding support
       "args": ["aws-samples.neptune-mcp-servers.neptune-query"],
       "env": {
         "FASTMCP_LOG_LEVEL": "INFO",
-        "NEPTUNE_ENDPOINT": "<INSERT NEPTUNE ENDPOINT IN FORMAT SPECIFIED BELOW>"
+        "NEPTUNE_QUERY_ENDPOINT": "<INSERT NEPTUNE ENDPOINT IN FORMAT SPECIFIED BELOW>"
       }
     }
   }

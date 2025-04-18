@@ -18,16 +18,20 @@ import argparse
 from neptune import NeptuneServer
 import logging
 from models import QueryLanguage, GraphSchema
-from typing import Dict
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-endpoint = os.environ.get("NEPTUNE_ENDPOINT", None)
-use_https = os.environ.get("NEPTUNE_USE_HTTPS", 'True').lower() in ('true', '1', 't')
-logger.info(f"NEPTUNE_ENDPOINT: {endpoint}")
+endpoint = os.environ.get("NEPTUNE_QUERY_ENDPOINT", None)
+use_https = os.environ.get("NEPTUNE_QUERY_USE_HTTPS", "True").lower() in (
+    "true",
+    "1",
+    "t",
+)
+logger.info(f"NEPTUNE_QUERY_ENDPOINT: {endpoint}")
 if endpoint is None:
-    raise ValueError("NEPTUNE_ENDPOINT environment variable is not set")
+    raise ValueError("NEPTUNE_QUERY_ENDPOINT environment variable is not set")
 graph = NeptuneServer(endpoint, use_https=use_https)
 
 
@@ -44,21 +48,27 @@ mcp = FastMCP(
     dependencies=[
         "langchain-aws",
         "mcp[cli]",
-    ]
+    ],
 )
 
-@mcp.resource(uri="amazon-neptune://status", name='GraphStatus', mime_type='application/text')
+
+@mcp.resource(
+    uri="amazon-neptune://status", name="GraphStatus", mime_type="application/text"
+)
 def get_status_resource() -> str:
     """Get the status of the currently configured Amazon Neptune graph"""
     return graph.status()
 
 
-@mcp.resource(uri="amazon-neptune://schema", name='GraphSchema', mime_type='application/text')
+@mcp.resource(
+    uri="amazon-neptune://schema", name="GraphSchema", mime_type="application/text"
+)
 def get_schema_resource() -> GraphSchema:
     """Get the schema for the graph including the vertex and edge labels as well as the
     (vertex)-[edge]->(vertex) combinations.
     """
     return graph.schema()
+
 
 @mcp.tool(name="get_graph_status")
 def get_status() -> str:
@@ -74,27 +84,37 @@ def get_schema() -> GraphSchema:
     return graph.schema()
 
 
-@mcp.tool(name='run_query')
-def run_query(query: str, language:QueryLanguage, parameters:Dict = None) -> Dict:
-    """Executes an openCypher or Gremlin query (as specified) against the graph"""
-    return graph.query(query, language, parameters)
+@mcp.tool(name="run_opencypher_query")
+def run_opencypher_query(query: str, parameters: Optional[dict] = None) -> dict:
+    """Executes the provided openCypher against the graph"""
+    return graph.query(query, QueryLanguage.OPEN_CYPHER, parameters)
+
+
+@mcp.tool(name="run_gremlin_query")
+def run_gremlin_query(query: str) -> dict:
+    """Executes the provided Tinkerpop Gremlin against the graph"""
+    return graph.query(query, QueryLanguage.GREMLIN)
 
 
 def main():
     """Run the MCP server with CLI argument support."""
-    parser = argparse.ArgumentParser(description='A Model Context Protocol (MCP) server')
-    parser.add_argument('--sse', action='store_true', help='Use SSE transport')
-    parser.add_argument('--port', type=int, default=8888, help='Port to run the server on')
+    parser = argparse.ArgumentParser(
+        description="A Model Context Protocol (MCP) server"
+    )
+    parser.add_argument("--sse", action="store_true", help="Use SSE transport")
+    parser.add_argument(
+        "--port", type=int, default=8888, help="Port to run the server on"
+    )
 
     args = parser.parse_args()
 
     # Run server with appropriate transport
     if args.sse:
         mcp.settings.port = args.port
-        mcp.run(transport='sse')
+        mcp.run(transport="sse")
     else:
         mcp.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

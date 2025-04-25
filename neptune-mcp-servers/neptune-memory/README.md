@@ -11,13 +11,23 @@ This MCP server allows you to have a persistent memory knowledge graph for your 
 
 ## Installation
 
-To use this with MCP clients you need to 
+Below is an example of how to configure your MCP client, although different clients may require a different format.
+
 ```json
 {
   "mcpServers": {
-    "aws-samples.neptune-mcp-servers.neptune-memory": {
-      "command": "uvx",
-      "args": ["aws-samples.neptune-mcp-servers.neptune-memory"],
+    "Neptune Memory": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "langchain-aws",
+        "--with",
+        "mcp[cli]",
+        "mcp",
+        "run",
+        "<INSERT FILE LOCATIONS>/neptune-mcp-servers/neptune-memory/server.py"
+      ],
       "env": {
         "FASTMCP_LOG_LEVEL": "INFO",
         "NEPTUNE_MEMORY_ENDPOINT": "<INSERT NEPTUNE ENDPOINT IN FORMAT SPECIFIED BELOW>"

@@ -10,15 +10,25 @@ This MCP server allows you to run Gremlin and openCypher queries against a Neptu
 2. Install Python using `uv python install 3.12`
 ## Installation
 
-Here are some ways you can work with MCP clients.
+Below is an example of how to configure your MCP client, although different clients may require a different format.
 
 
 ```json
 {
   "mcpServers": {
-    "aws-samples.neptune-mcp-servers.neptune-query": {
-      "command": "uvx",
-      "args": ["aws-samples.neptune-mcp-servers.neptune-query"],
+    "Neptune Query": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "langchain-aws",
+        "--with",
+        "mcp[cli]",
+        "mcp",
+        "run",
+        "<INSERT FILE LOCATIONS>/neptune-mcp-servers/neptune-query/server.py"
+      ],      "command": "uvx",
+      "args": ["neptune-query"],
       "env": {
         "FASTMCP_LOG_LEVEL": "INFO",
         "NEPTUNE_QUERY_ENDPOINT": "<INSERT NEPTUNE ENDPOINT IN FORMAT SPECIFIED BELOW>"

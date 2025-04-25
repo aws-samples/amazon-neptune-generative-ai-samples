@@ -86,7 +86,7 @@ def execute(source_folder,checkpoint_name,graph_endpoint,vector_endpoint,batch_c
     BATCH_EXTRACTION_ROLE_ARN=batch_config['role_arn']
 
     # TOOLKIT LOGGING CONFIGURATION
-    set_logging_config(logging, ['graphrag_toolkit.indexing.extract', 'graphrag_toolkit.indexing.build'])
+    set_logging_config(logging_level='INFO', included_modules=['graphrag_toolkit.indexing.extract', 'graphrag_toolkit.indexing.build'])
 
     # START OF PROGRAMME 
     print(f"Creating GraphStoreFactory: {GRAPH_STORE} ...")
@@ -315,7 +315,18 @@ if args:
                 except:
                     print("Please specify a valid IAM role arn in the batch configuration")
                     sys.exit(1)
-                
+                try:
+                    extraction_batch_size = int(batch_config['extraction_batch_size'])
+                except:
+                    print("Please specify a valid extraction batch size. Must be numeric.")
+                    sys.exit(1)
+                try:
+                    bool_map = {"true":True, "false":False}
+                    include_domain_labels = bool_map.get(batch_config['include_domain_labels'].strip().lower, False)
+                except:
+                    print("Please specify a valid argument for including domain labels. Must be boolean.")
+                    sys.exit(1)
+
                 batch_config = {
                     "region": region,
                     "bucket": bucket,

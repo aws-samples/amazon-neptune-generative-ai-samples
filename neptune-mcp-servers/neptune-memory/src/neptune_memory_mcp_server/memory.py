@@ -23,8 +23,8 @@ providing methods to manipulate and query the graph structure while maintaining 
 import json
 import logging
 from dataclasses import asdict
-from models import Entity, KnowledgeGraph, Observation, QueryLanguage, Relation
-from neptune import NeptuneServer
+from .models import Entity, KnowledgeGraph, Observation, QueryLanguage, Relation
+from .neptune import NeptuneServer
 from typing import Any, Dict, List
 
 

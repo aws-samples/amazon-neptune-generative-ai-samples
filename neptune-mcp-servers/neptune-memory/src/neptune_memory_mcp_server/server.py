@@ -23,9 +23,9 @@ import argparse
 import logging
 import os
 from mcp.server.fastmcp import FastMCP
-from memory import KnowledgeGraphManager
-from models import Entity, KnowledgeGraph, Relation
-from neptune import NeptuneServer
+from neptune_memory_mcp_server.memory import KnowledgeGraphManager
+from neptune_memory_mcp_server.models import Entity, KnowledgeGraph, Relation
+from neptune_memory_mcp_server.neptune import NeptuneServer
 from typing import List
 
 

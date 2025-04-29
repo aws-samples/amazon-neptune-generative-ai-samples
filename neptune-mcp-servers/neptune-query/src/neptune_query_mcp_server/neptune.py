@@ -26,7 +26,7 @@ from enum import Enum
 import logging
 import json
 from dataclasses import asdict
-from models import (
+from .models import (
     Relationship,
     QueryLanguage,
     GraphSchema,

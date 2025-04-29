@@ -25,7 +25,7 @@ import logging
 from dataclasses import asdict
 from enum import Enum
 from langchain_aws.graphs import NeptuneAnalyticsGraph, NeptuneGraph
-from .models import (
+from neptune_memory_mcp_server.models import (
     GraphSchema,
     Node,
     Property,

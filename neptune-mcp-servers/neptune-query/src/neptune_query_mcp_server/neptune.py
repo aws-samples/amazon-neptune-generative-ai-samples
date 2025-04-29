@@ -26,7 +26,7 @@ from enum import Enum
 import logging
 import json
 from dataclasses import asdict
-from .models import (
+from neptune_query_mcp_server.models import (
     Relationship,
     QueryLanguage,
     GraphSchema,

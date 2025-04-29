@@ -15,6 +15,7 @@ neptune-memory-mcp-server = "neptune_memory_mcp_server.server:main"
 [tool.uv]
 package = true
 
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

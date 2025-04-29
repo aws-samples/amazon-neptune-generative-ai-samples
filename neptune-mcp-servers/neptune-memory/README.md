@@ -17,17 +17,10 @@ Below is an example of how to configure your MCP client, although different clie
 {
   "mcpServers": {
     "Neptune Memory": {
-      "command": "uv",
+      "command": "uvx",
       "args": [
-        "run",
-        "--with",
-        "langchain-aws",
-        "--with",
-        "mcp[cli]",
-        "mcp",
-        "run",
-        "<INSERT FILE LOCATIONS>/neptune-mcp-servers/neptune-memory/server.py"
-      ],
+        "https://github.com/aws-samples/amazon-neptune-generative-ai-samples/releases/download/mcp-servers-v0.0.9-beta/neptune_memory_mcp_server-0.0.9-py3-none-any.whl"
+       ],
       "env": {
         "FASTMCP_LOG_LEVEL": "INFO",
         "NEPTUNE_MEMORY_ENDPOINT": "<INSERT NEPTUNE ENDPOINT IN FORMAT SPECIFIED BELOW>"
@@ -35,6 +28,7 @@ Below is an example of how to configure your MCP client, although different clie
     }
   }
 }
+
 ```
 
 When specifying the Neptune Endpoint the following formats are expected:

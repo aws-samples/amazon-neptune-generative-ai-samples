@@ -339,7 +339,7 @@ wheels = [
 
 [[package]]
 name = "neptune-query-mcp-server"
-version = "0.1.1"
+version = "0.0.9"
 source = { editable = "." }
 dependencies = [
     { name = "langchain-aws" },

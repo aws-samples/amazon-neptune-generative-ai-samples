@@ -17,9 +17,9 @@ import argparse
 import inspect
 
 
-from .neptune import NeptuneServer
+from neptune_query_mcp_server.neptune import NeptuneServer
 import logging
-from .models import QueryLanguage, GraphSchema
+from neptune_query_mcp_server.models import QueryLanguage, GraphSchema
 from typing import Optional
 
 logger = logging.getLogger(__name__)

@@ -1,17 +1,23 @@
 [project]
-name = "neptune-memory"
-version = "0.1.0"
-description = "Add your description here"
+name = "neptune-memory-mcp-server"
+version = "0.0.9"
+description = "This is an MCP server that allows users for a persistent memory knowledge graph using Amazon Neptune"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
 
-[tool.setuptools]
-py-modules = []
+[project.scripts]
+neptune-memory-mcp-server = "neptune_memory_mcp_server.server:main"
+
+[tool.uv]
+package = true
 
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.ruff.lint]
 exclude = ["__init__.py"]
@@ -34,3 +40,6 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 docstring-code-format = true
+
+[tool.hatch.build.targets.wheel]
+sources = ["src/"]

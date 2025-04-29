@@ -14,6 +14,8 @@
 from mcp.server.fastmcp import FastMCP
 import os
 import argparse
+import inspect
+
 
 from neptune import NeptuneServer
 import logging
@@ -95,9 +97,18 @@ def run_gremlin_query(query: str) -> dict:
     """Executes the provided Tinkerpop Gremlin against the graph"""
     return graph.query(query, QueryLanguage.GREMLIN)
 
+def print_current_module():
+    """Prints the module name of the calling function."""
+    stack = inspect.stack()
+    # stack[0] represents the current frame, stack[1] represents the caller frame
+    caller_frame = stack[1]
+    module = inspect.getmodule(caller_frame[0])
+    print(f"Currently in module: {module.__name__}")
 
 def main():
     """Run the MCP server with CLI argument support."""
+    print_current_module()
+
     parser = argparse.ArgumentParser(
         description="A Model Context Protocol (MCP) server"
     )

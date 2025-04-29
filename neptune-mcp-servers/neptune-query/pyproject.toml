@@ -1,6 +1,6 @@
 [project]
-name = "neptune-query"
-version = "0.1.0"
+name = "neptune-query-mcp-server"
+version = "0.0.9"
 description = "This is an MCP server that allows users to query Amazon Neptune Database or Analytics usign Gremlin or openCypher"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -9,12 +9,18 @@ dependencies = [
     "mcp[cli]>=1.6.0",
 ]
 
-[tool.setuptools]
-py-modules = []
+[project.scripts]
+neptune-query-mcp-server = "neptune_query_mcp_server.server:main"
+
+[tool.uv]
+package = true
 
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.ruff.lint]
 exclude = ["__init__.py"]
@@ -37,3 +43,6 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 docstring-code-format = true
+
+[tool.hatch.build.targets.wheel]
+sources = ["src/"]

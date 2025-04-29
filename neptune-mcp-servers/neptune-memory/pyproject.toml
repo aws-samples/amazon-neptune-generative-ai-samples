@@ -4,7 +4,10 @@ version = "0.0.9"
 description = "This is an MCP server that allows users for a persistent memory knowledge graph using Amazon Neptune"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "langchain-aws>=0.2.19",
+    "mcp[cli]>=1.6.0",
+]
 
 [project.scripts]
 neptune-memory-mcp-server = "neptune_memory_mcp_server.server:main"

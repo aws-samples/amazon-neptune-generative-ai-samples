@@ -43,7 +43,7 @@ For Neptune Database:
 `neptune-db://<Cluster Endpoint>`
 
 For Neptune Analytics:
-`neptune-analytics://<graph identifier>`
+`neptune-graph://<graph identifier>`
 
 ## Features
 

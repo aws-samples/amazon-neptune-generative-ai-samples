@@ -6,6 +6,7 @@ This repository contains examples and sample code to help customers get started 
 
 - [Blogs](./blogs/README.md) - Contains examples and sample code pertaining to specific blogs
 - [Natural Language Querying](./natural_language_querying/README.md) - Examples and tips for performing natural language querying (Text to openCypher/Gremlin/SPARQL) using Amazon Neptune
+- [Neptune MCP Servers](./neptune-mcp-servers/README.MD) - Example MCP Servers for Amazon Neptune
 - [Solutions](./solutions/README.md) - Example solutions using generative AI with Amazon Neptune
 - [Presentations](./presentations/README.md) - Collateral for presentations using generative AI with Amazon Neptune
 - [Workshops](./workshops/README.md) - Example workshops using generative AI with Amazon Neptune that contain hands on exercises for customers

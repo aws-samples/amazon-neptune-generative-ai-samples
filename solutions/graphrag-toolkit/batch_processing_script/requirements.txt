@@ -163,7 +163,7 @@ tldextract==5.3.0
 tokenizers==0.21.1
 torch==2.4.1
 tqdm==4.67.1
-transformers==4.48.0
+transformers==4.50.0
 trec-car-tools==2.6
 trio==0.30.0
 trio-websocket==0.12.2

@@ -8,7 +8,9 @@ A Model Context Protocol (MCP) server for [Amazon Neptune](https://aws.amazon.co
 
 This repo contains the following MCP servers:
 
-### [Neptune Query Server](./neptune-query/README.md)
+### [Neptune Query Server](./neptune-query/README.md) (Deprecated)
+
+Update 5/16/2025- The Neptune Query server has been moved to the AWSLabs MCP repo [here](https://github.com/awslabs/mcp/blob/main/src/amazon-neptune-mcp-server/README.md).
 
 A server that allows for running queries on Amazon Neptune.
 

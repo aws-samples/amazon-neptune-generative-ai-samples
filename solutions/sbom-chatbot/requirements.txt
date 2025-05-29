@@ -54,7 +54,7 @@ langsmith==0.1.101
 llama-cloud==0.0.13
 llama-index==0.10.65
 llama-index-agent-openai==0.2.9
-llama-index-cli==0.1.13
+llama-index-cli==0.4.1
 llama-index-core==0.10.65
 llama-index-embeddings-bedrock==0.2.1
 llama-index-embeddings-openai==0.1.11

@@ -94,7 +94,7 @@ pathspec==0.12.1
 pillow==10.4.0
 platformdirs==4.2.2
 pre-commit==3.8.0
-protobuf==5.27.3
+protobuf==5.29.5
 pyarrow==17.0.0
 pydantic==2.8.2
 pydantic_core==2.20.1

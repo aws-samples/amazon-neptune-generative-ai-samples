@@ -74,7 +74,8 @@ def create_entities(entities: List[Entity]) -> str:
     Returns:
         str: Confirmation message indicating the result of the operation.
     """
-    return memory.create_entities(entities)
+    result = memory.create_entities(entities)
+    return f"Successfully created {len(result)} entities."
 
 
 @mcp.tool(name="create_relations",
@@ -89,7 +90,8 @@ def create_relations(relations: List[Relation]) -> str:
     Returns:
         str: Confirmation message indicating the result of the operation.
     """
-    return memory.create_relations(relations)
+    result = memory.create_relations(relations)
+    return f"Successfully created {len(result)} relations."
 
 
 @mcp.tool(name="read_memory",

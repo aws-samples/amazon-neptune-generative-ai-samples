@@ -14,11 +14,11 @@ This folder contains a sample application built on Streamlit that shows how you 
 This folder contains sample code relating to implementing solutions using the [GraphRAG Toolkit](https://github.com/awslabs/graphrag-toolkit/tree/main).
 
 This folder contains two folders;
-- `batch_processing_script` - a sample script that can be run from any Python 3.11 enabled command-line (CLI) environment to create a knowledge graph using [Amazon Neptune](https://www.amazonaws.com/neptune) and the GraphRAG toolkit from PDF files stored on the file system.toolkit
-- `notebooks` - sample Jupyter notebooks that provide examples of using the GraphRAG toolkit with Amazon Neptune and Amazon OpenSearch Serverless.
+- `(batch_processing_script)[/graphrag-toolkit/batch_processing_script]` - a sample script that can be run from any Python 3.11 enabled command-line (CLI) environment to create a knowledge graph using [Amazon Neptune](https://www.amazonaws.com/neptune) and the GraphRAG toolkit from PDF files stored on the file system.toolkit
+- `(notebooks)[/graphrag-toolkit/notebooks]` - sample Jupyter notebooks that provide examples of using the GraphRAG toolkit with Amazon Neptune and Amazon OpenSearch Serverless.
 
 ## `mcp` - Use the Neptune MCP server for 'Conversational Graph Analytics' with Amazon Neptune
 
 The folder contains sample code relating to implementing solutions using the [Amazon MCP Server](https://github.com/awslabs/mcp/tree/main/src/amazon-neptune-mcp-server).
 
-- `notebooks` - sample Jupyter notebooks that provide examples of using the Neptune MCP server with Amazon Neptune to help build your knowledge graph and ask natural language questions of the generated graph.
+- `(notebooks)[/mcp/notebooks]` - sample Jupyter notebooks that provide examples of using the Neptune MCP server with Amazon Neptune to help build your knowledge graph and ask natural language questions of the generated graph.

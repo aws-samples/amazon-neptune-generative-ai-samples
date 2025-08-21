@@ -1,0 +1,22 @@
+[project]
+name = "agent-memory"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.39.11",
+    "cognee[neptune]==0.2.3",
+    "mem0ai[extras, graph]>=0.1.116",
+    "opensearch-py>=3.0.0",
+    "python-dotenv>=1.1.1",
+    "graphiti_core"
+]
+
+[tool.uv.sources]
+graphiti-core = { path = "graphiti_core-0.18.5-py3-none-any.whl" }
+
+[tool.uv]
+override-dependencies = [
+    "langchain-neo4j ; sys_platform == 'never'"
+]

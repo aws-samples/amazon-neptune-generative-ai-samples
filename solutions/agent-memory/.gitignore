@@ -167,3 +167,4 @@ cache.db*
 # All DS_Store files
 .DS_Store
 .cognee_system
+.data_storage

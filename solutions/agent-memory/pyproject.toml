@@ -10,7 +10,11 @@ dependencies = [
     "mem0ai[extras, graph]>=0.1.116",
     "opensearch-py>=3.0.0",
     "python-dotenv>=1.1.1",
-    "graphiti_core"
+    "graphiti_core",
+    "streamlit>=1.48.1",
+    "strands-agents>=1.5.0",
+    "strands-agents-tools>=0.2.4",
+    "ddgs>=9.5.4",
 ]
 
 [tool.uv.sources]
@@ -18,5 +22,6 @@ graphiti-core = { path = "graphiti_core-0.18.5-py3-none-any.whl" }
 
 [tool.uv]
 override-dependencies = [
-    "langchain-neo4j ; sys_platform == 'never'"
+    "fsspec==2025.7.0",
+    "langchain-neo4j==0.5.0"
 ]

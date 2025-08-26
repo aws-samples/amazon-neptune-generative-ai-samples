@@ -168,3 +168,4 @@ cache.db*
 .DS_Store
 .cognee_system
 .data_storage
+*.whl

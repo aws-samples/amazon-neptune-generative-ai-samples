@@ -3,14 +3,19 @@ from strands.agent.conversation_manager import SlidingWindowConversationManager
 from strands import tool
 from frameworks import Mem0Demo
 from strands import Agent
+from .weather_agent import weather_agent
 
 
 # Define agent
 system_prompt = """You are an assistant that creates helpful responses based on retrieved memories.
 Use the provided memories to create a natural, conversational response to the user's question.  
 If you have no memories of me then the first thing you should search the first thing you should do is load 
-them using search_memory tool.  If you have no memories than do not add one, just ask me about a trip I want to take.  
-Do not store any memories into the conversation history """
+them using search_memory tool.  If you have no memories than do not add one, 
+just ask me about a trip I want to take.  
+
+If I ask about the weather in an area that is located in the United Statesß then please use the weather tool.
+
+"""
 
 model = BedrockModel(
     model_id="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
@@ -42,6 +47,7 @@ memory_agent = Agent(
         system_prompt=system_prompt,
         tools=[
             search_memory,
-            add_memory
+            add_memory,
+            weather_agent
         ]
     )

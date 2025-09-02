@@ -73,6 +73,7 @@ agent-memory/
 │   ├── weather_agent.py
 │   └── general_assistant.py
 ├── app.py             # Streamlit web application
+├── load_all_frameworks.py # A python script to load the same data into the three different frameworks for comparison
 └── pyproject.toml     # Project dependencies
 ```
 

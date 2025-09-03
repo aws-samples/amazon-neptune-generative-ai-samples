@@ -1,6 +1,10 @@
 # Sample Solutions
 This folder contains a sample solutions using Generative AI tools and techniques that you can run in your own environment. 
 
+## `agent-memory` - Use agent memory frameworks with Amazon Neptune
+
+This folder contains sample code showing you how to use Cognee, Zep Graphiti, and Mem0 agent frameworks with Amazon Neptune.
+
 ## `sbom-chatbot` - Analyze Software Bill Of Materials (SBOM) using Generative AI with Amazon Neptune
 
 This folder contains a sample application built on Streamlit that shows how you can use Amazon Neptune with different Generative AI techniques to run:

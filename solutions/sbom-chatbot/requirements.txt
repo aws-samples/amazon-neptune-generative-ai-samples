@@ -101,7 +101,7 @@ pydantic_core==2.20.1
 pydeck==0.9.1
 Pygments==2.18.0
 pylint==3.2.6
-pypdf==4.3.1
+pypdf==6.4.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pytz==2024.1

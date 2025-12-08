@@ -49,7 +49,7 @@ llama-cloud==0.1.0
 llama-index==0.13.0
 llama-index-agent-openai==0.3.4
 llama-index-cli==0.3.1
-llama-index-core==0.12.9
+llama-index-core==0.13.0
 llama-index-embeddings-bedrock==0.3.1
 llama-index-embeddings-openai==0.2.5
 llama-index-graph-stores-neptune==0.2.2

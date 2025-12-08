@@ -42,11 +42,11 @@ jsonschema==4.23.0
 jsonschema-specifications==2023.12.1
 langchain==0.3.1
 langchain-community==0.3.1
-langchain-core==0.3.6
+langchain-core==0.3.80
 langchain-text-splitters==0.3.9
 langsmith==0.1.129
 llama-cloud==0.1.0
-llama-index==0.11.16
+llama-index==0.13.0
 llama-index-agent-openai==0.3.4
 llama-index-cli==0.3.1
 llama-index-core==0.13.0

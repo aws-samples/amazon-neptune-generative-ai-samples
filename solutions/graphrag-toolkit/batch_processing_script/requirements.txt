@@ -117,7 +117,7 @@ pydantic_core==2.33.1
 pyee==12.1.1
 Pygments==2.19.1
 pynvml==11.5.3
-pypdf==5.4.0
+pypdf==6.4.0
 PySocks==1.7.1
 pytest==8.2.2
 python-dateutil==2.9.0.post0
@@ -173,7 +173,7 @@ typing-inspection==0.4.0
 typing_extensions==4.13.2
 tzdata==2025.2
 unlzw3==0.2.3
-urllib3==2.4.0
+urllib3==2.6.0
 warc3-wet==0.2.5
 warc3-wet-clueweb09==0.2.5
 wasabi==1.1.3

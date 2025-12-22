@@ -75,7 +75,7 @@ llama-parse==0.4.9
 llmsherpa==0.1.4
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
-marshmallow==3.21.3
+marshmallow==3.26.2
 mccabe==0.7.0
 mdurl==0.1.2
 multidict==6.0.5

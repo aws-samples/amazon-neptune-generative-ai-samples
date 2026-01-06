@@ -38,7 +38,7 @@ huggingface-hub==0.24.5
 identify==2.6.0
 idna==3.7
 isort==5.13.2
-Jinja2==3.1.5
+Jinja2==3.1.6
 jiter==0.5.0
 jmespath==1.0.1
 joblib==1.4.2

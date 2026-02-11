@@ -91,7 +91,7 @@ orjson==3.10.7
 packaging==24.1
 pandas==2.2.2
 pathspec==0.12.1
-pillow==10.4.0
+pillow==12.1.1
 platformdirs==4.2.2
 pre-commit==3.8.0
 protobuf==5.29.6

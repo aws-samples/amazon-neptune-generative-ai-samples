@@ -76,7 +76,7 @@ networkx==3.3
 nltk==3.9.3
 numpy==1.26.4
 openai==1.50.1
-orjson==3.10.7
+orjson==3.11.6
 packaging==24.1
 pandas==2.2.3
 pillow==12.1.1

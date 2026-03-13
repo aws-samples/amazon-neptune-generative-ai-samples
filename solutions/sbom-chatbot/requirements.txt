@@ -87,7 +87,7 @@ nltk==3.9.1
 nodeenv==1.9.1
 numpy==1.26.4
 openai==1.40.6
-orjson==3.10.7
+orjson==3.11.6
 packaging==24.1
 pandas==2.2.2
 pathspec==0.12.1

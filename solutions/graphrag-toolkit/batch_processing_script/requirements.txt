@@ -115,7 +115,7 @@ pycparser==2.22
 pydantic==2.11.3
 pydantic_core==2.33.1
 pyee==12.1.1
-Pygments==2.19.1
+Pygments==2.20.0
 pynvml==11.5.3
 pypdf==6.9.2
 PySocks==1.7.1

@@ -119,7 +119,7 @@ soupsieve==2.6
 SQLAlchemy==2.0.32
 st-cytoscape==0.0.5
 st-link-analysis==0.2.0
-streamlit==1.37.1
+streamlit==1.54.0
 streamlit_carousel==1.1.2
 striprtf==0.0.26
 tenacity==8.5.0

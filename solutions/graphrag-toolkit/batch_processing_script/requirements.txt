@@ -119,7 +119,7 @@ Pygments==2.20.0
 pynvml==11.5.3
 pypdf==6.10.0
 PySocks==1.7.1
-pytest==8.2.2
+pytest==9.0.3
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pytz==2025.2

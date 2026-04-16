@@ -117,7 +117,7 @@ pydantic_core==2.33.1
 pyee==12.1.1
 Pygments==2.20.0
 pynvml==11.5.3
-pypdf==6.10.0
+pypdf==6.10.2
 PySocks==1.7.1
 pytest==9.0.3
 python-dateutil==2.9.0.post0

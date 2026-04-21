@@ -103,7 +103,7 @@ Pygments==2.20.0
 pylint==3.2.6
 pypdf==6.10.2
 python-dateutil==2.9.0.post0
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 pytz==2024.1
 PyYAML==6.0.2
 referencing==0.35.1

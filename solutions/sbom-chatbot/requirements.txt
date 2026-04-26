@@ -83,7 +83,7 @@ mypy-extensions==1.0.0
 narwhals==1.4.1
 nest-asyncio==1.6.0
 networkx==3.3
-nltk==3.9.1
+nltk==3.9.4
 nodeenv==1.9.1
 numpy==1.26.4
 openai==1.40.6

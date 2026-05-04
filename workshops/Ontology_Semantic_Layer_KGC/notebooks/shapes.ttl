@@ -1,0 +1,146 @@
+@prefix : <http://example.org/insurance#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:ClaimShape a sh:NodeShape ;
+    sh:targetClass :Claim ;
+    sh:property [
+        sh:path :claimId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path :claimAmount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:decimal ;
+        sh:minInclusive 0 ;
+    ] ;
+    sh:property [
+        sh:path :incidentDate ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:dateTime ;
+    ] ;
+    sh:property [
+        sh:path :forPolicy ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class :Policy ;
+    ] ;
+    sh:property [
+        sh:path :hasEvent ;
+        sh:minCount 1 ;
+        sh:class :ClaimEvent ;
+    ] .
+
+:ClaimEventShape a sh:NodeShape ;
+    sh:targetClass :ClaimEvent ;
+    sh:property [
+        sh:path :eventType ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:in ("submitted" "approved" "denied" "paid" "adjusted") ;
+    ] ;
+    sh:property [
+        sh:path :eventTimestamp ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:dateTime ;
+    ] ;
+    sh:property [
+        sh:path :eventAmount ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:decimal ;
+        sh:minInclusive 0 ;
+    ] .
+
+:PolicyShape a sh:NodeShape ;
+    sh:targetClass :Policy ;
+    sh:property [
+        sh:path :policyId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path :policyType ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:in ("FSA" "HSA" "HRA") ;
+    ] ;
+    sh:property [
+        sh:path :hasCoverage ;
+        sh:minCount 1 ;
+        sh:class :PolicyCoverage ;
+    ] .
+
+:PolicyCoverageShape a sh:NodeShape ;
+    sh:targetClass :PolicyCoverage ;
+    sh:property [
+        sh:path :coverageAmount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:decimal ;
+        sh:minInclusive 0 ;
+    ] ;
+    sh:property [
+        sh:path :deductible ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:decimal ;
+        sh:minInclusive 0 ;
+    ] ;
+    sh:property [
+        sh:path :premium ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:decimal ;
+        sh:minInclusive 0 ;
+    ] ;
+    sh:property [
+        sh:path :validFrom ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:dateTime ;
+    ] ;
+    sh:property [
+        sh:path :validTo ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:dateTime ;
+    ] ;
+    sh:property [
+        sh:path :isCurrent ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:boolean ;
+    ] ;
+    sh:sparql [
+        sh:message "validTo must be after validFrom" ;
+        sh:select """
+            PREFIX : <http://example.org/insurance#>
+            SELECT $this
+            WHERE {
+                $this :validFrom ?from ;
+                      :validTo ?to .
+                FILTER (?to <= ?from)
+            }
+        """ ;
+    ] ;
+    sh:sparql [
+        sh:message "Only one coverage can be current per policy" ;
+        sh:select """
+            PREFIX : <http://example.org/insurance#>
+            SELECT $this
+            WHERE {
+                ?policy :hasCoverage $this .
+                $this :isCurrent true .
+                ?policy :hasCoverage ?other .
+                ?other :isCurrent true .
+                FILTER ($this != ?other)
+            }
+        """ ;
+    ] .

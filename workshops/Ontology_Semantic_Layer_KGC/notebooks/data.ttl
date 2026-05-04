@@ -1,0 +1,204 @@
+@prefix : <http://example.org/insurance#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# =========================================================================
+# Customers
+# =========================================================================
+
+:customer001 a :Customer ;
+    :customerId "CUST001" ;
+    :customerName "Nora Copay" .
+
+:customer002 a :Customer ;
+    :customerId "CUST002" ;
+    :customerName "Owen Deductible" .
+
+:customer003 a :Customer ;
+    :customerId "CUST003" ;
+    :customerName "Lily Referral" .
+
+# =========================================================================
+# Policies
+# =========================================================================
+
+# Policy P001 with SCD Type 2 history (coverage increased)
+:policy001 a :Policy ;
+    :policyId "P001" ;
+    :policyType "FSA" ;
+    :heldBy :customer001 .
+
+# Coverage 1: Initial coverage
+:policy001_v1 a :PolicyCoverage ;
+    :coverageAmount 100000.00 ;
+    :deductible 1000.00 ;
+    :premium 500.00 ;
+    :validFrom "2025-01-01T00:00:00"^^xsd:dateTime ;
+    :validTo "2026-01-01T00:00:00"^^xsd:dateTime ;
+    :isCurrent false .
+
+:policy001 :hasCoverage :policy001_v1 .
+
+# Coverage 2: Increased coverage (current)
+:policy001_v2 a :PolicyCoverage ;
+    :coverageAmount 150000.00 ;
+    :deductible 1000.00 ;
+    :premium 650.00 ;
+    :validFrom "2026-01-01T00:00:00"^^xsd:dateTime ;
+    :isCurrent true .
+
+:policy001 :hasCoverage :policy001_v2 .
+
+# Claim C001 filed under old policy coverage
+:claim001 a :Claim ;
+    :claimId "C001" ;
+    :claimAmount 5000.00 ;
+    :incidentDate "2025-12-15T14:30:00"^^xsd:dateTime ;
+    :forPolicy :policy001 .
+
+:claim001_event1 a :ClaimEvent ;
+    :eventType "submitted" ;
+    :eventTimestamp "2025-12-20T10:00:00"^^xsd:dateTime ;
+    :eventAmount 5000.00 .
+
+:claim001 :hasEvent :claim001_event1 .
+
+:claim001_event2 a :ClaimEvent ;
+    :eventType "adjusted" ;
+    :eventTimestamp "2026-01-05T14:30:00"^^xsd:dateTime ;
+    :eventAmount 4500.00 .
+
+:claim001 :hasEvent :claim001_event2 .
+
+:claim001_event3 a :ClaimEvent ;
+    :eventType "approved" ;
+    :eventTimestamp "2026-01-10T09:00:00"^^xsd:dateTime ;
+    :eventAmount 4500.00 .
+
+:claim001 :hasEvent :claim001_event3 .
+
+:claim001_event4 a :ClaimEvent ;
+    :eventType "paid" ;
+    :eventTimestamp "2026-02-10T09:15:00"^^xsd:dateTime ;
+    :eventAmount 4500.00 .
+
+:claim001 :hasEvent :claim001_event4 .
+
+# Claim C002 filed under new policy version
+:claim002 a :Claim ;
+    :claimId "C002" ;
+    :claimAmount 1200.00 ;
+    :incidentDate "2026-02-01T11:00:00"^^xsd:dateTime ;
+    :forPolicy :policy001 .
+
+:claim002_event1 a :ClaimEvent ;
+    :eventType "submitted" ;
+    :eventTimestamp "2026-02-01T11:00:00"^^xsd:dateTime ;
+    :eventAmount 1200.00 .
+
+:claim002 :hasEvent :claim002_event1 .
+
+# Policy P002 with gap (lapsed then reinstated)
+:policy002 a :Policy ;
+    :policyId "P002" ;
+    :policyType "HSA" ;
+    :heldBy :customer002 .
+
+# Coverage 1: Original coverage
+:policy002_v1 a :PolicyCoverage ;
+    :coverageAmount 75000.00 ;
+    :deductible 500.00 ;
+    :premium 400.00 ;
+    :validFrom "2025-06-01T00:00:00"^^xsd:dateTime ;
+    :validTo "2025-12-31T23:59:59"^^xsd:dateTime ;
+    :isCurrent false .
+
+:policy002 :hasCoverage :policy002_v1 .
+
+# Coverage 2: Reinstated with higher coverage
+:policy002_v2 a :PolicyCoverage ;
+    :coverageAmount 90000.00 ;
+    :deductible 500.00 ;
+    :premium 450.00 ;
+    :validFrom "2026-02-01T00:00:00"^^xsd:dateTime ;
+    :isCurrent true .
+
+:policy002 :hasCoverage :policy002_v2 .
+
+# Claim C003 during coverage gap (should show no matching policy version)
+:claim003 a :Claim ;
+    :claimId "C003" ;
+    :claimAmount 3000.00 ;
+    :incidentDate "2026-01-15T16:00:00"^^xsd:dateTime ;
+    :forPolicy :policy002 .
+
+:claim003_event1 a :ClaimEvent ;
+    :eventType "submitted" ;
+    :eventTimestamp "2026-01-20T10:00:00"^^xsd:dateTime ;
+    :eventAmount 3000.00 .
+
+:claim003 :hasEvent :claim003_event1 .
+
+:claim003_event2 a :ClaimEvent ;
+    :eventType "denied" ;
+    :eventTimestamp "2026-01-25T14:00:00"^^xsd:dateTime .
+
+:claim003 :hasEvent :claim003_event2 .
+
+# =========================================================================
+# Additional denial scenarios for eligibility testing
+# =========================================================================
+
+# Policy P003: Small coverage policy
+:policy003 a :Policy ;
+    :policyId "P003" ;
+    :policyType "HRA" ;
+    :heldBy :customer003 .
+
+:policy003_v1 a :PolicyCoverage ;
+    :coverageAmount 10000.00 ;
+    :deductible 2000.00 ;
+    :premium 200.00 ;
+    :validFrom "2025-01-01T00:00:00"^^xsd:dateTime ;
+    :isCurrent true .
+
+:policy003 :hasCoverage :policy003_v1 .
+
+# Claim C004: Amount exceeds coverage limit ($15k claim on $10k-$2k=$8k net)
+:claim004 a :Claim ;
+    :claimId "C004" ;
+    :claimAmount 15000.00 ;
+    :incidentDate "2025-09-10T08:00:00"^^xsd:dateTime ;
+    :forPolicy :policy003 .
+
+:claim004_event1 a :ClaimEvent ;
+    :eventType "submitted" ;
+    :eventTimestamp "2025-09-12T09:00:00"^^xsd:dateTime ;
+    :eventAmount 15000.00 .
+
+:claim004 :hasEvent :claim004_event1 .
+
+:claim004_event2 a :ClaimEvent ;
+    :eventType "denied" ;
+    :eventTimestamp "2025-09-20T11:00:00"^^xsd:dateTime .
+
+:claim004 :hasEvent :claim004_event2 .
+
+# Claim C005: Filed way too late (incident March 2025, filed 120+ days later)
+:claim005 a :Claim ;
+    :claimId "C005" ;
+    :claimAmount 4000.00 ;
+    :incidentDate "2025-03-01T10:00:00"^^xsd:dateTime ;
+    :forPolicy :policy001 .
+
+:claim005_event1 a :ClaimEvent ;
+    :eventType "submitted" ;
+    :eventTimestamp "2025-07-15T09:00:00"^^xsd:dateTime ;
+    :eventAmount 4000.00 .
+
+:claim005 :hasEvent :claim005_event1 .
+
+:claim005_event2 a :ClaimEvent ;
+    :eventType "denied" ;
+    :eventTimestamp "2025-07-20T14:00:00"^^xsd:dateTime .
+
+:claim005 :hasEvent :claim005_event2 .

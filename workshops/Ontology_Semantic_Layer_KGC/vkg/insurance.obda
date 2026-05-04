@@ -1,0 +1,50 @@
+[PrefixDeclaration]
+:       http://example.org/insurance#
+owl:    http://www.w3.org/2002/07/owl#
+rdf:    http://www.w3.org/1999/02/22-rdf-syntax-ns#
+rdfs:   http://www.w3.org/2000/01/rdf-schema#
+xsd:    http://www.w3.org/2001/XMLSchema#
+
+[MappingDeclaration] @collection [[
+
+mappingId   customer
+target      :customer{id} a :Customer ; :customerId {customer_id}^^xsd:string ; :customerName {customer_name}^^xsd:string .
+source      SELECT id, customer_id, customer_name FROM customer
+
+mappingId   policy
+target      :policy{id} a :Policy ; :policyId {policy_id}^^xsd:string ; :policyType {policy_type}^^xsd:string .
+source      SELECT id, policy_id, policy_type FROM policy
+
+mappingId   policy_heldBy
+target      :policy{id} :heldBy :customer{customer_id} .
+source      SELECT id, customer_id FROM policy
+
+mappingId   policy_coverage
+target      :coverage{id} a :PolicyCoverage ; :coverageAmount {coverage_amount}^^xsd:decimal ; :deductible {deductible}^^xsd:decimal ; :premium {premium}^^xsd:decimal ; :validFrom {valid_from}^^xsd:dateTime ; :isCurrent {is_current}^^xsd:boolean .
+source      SELECT id, coverage_amount, deductible, premium, valid_from, is_current FROM policy_coverage
+
+mappingId   policy_coverage_validTo
+target      :coverage{id} :validTo {valid_to}^^xsd:dateTime .
+source      SELECT id, valid_to FROM policy_coverage WHERE valid_to IS NOT NULL
+
+mappingId   policy_hasCoverage
+target      :policy{policy_id} :hasCoverage :coverage{id} .
+source      SELECT id, policy_id FROM policy_coverage
+
+mappingId   claim
+target      :claim{id} a :Claim ; :claimId {claim_id}^^xsd:string ; :claimAmount {claim_amount}^^xsd:decimal ; :incidentDate {incident_date}^^xsd:dateTime ; :forPolicy :policy{policy_id} .
+source      SELECT id, claim_id, claim_amount, incident_date, policy_id FROM claim
+
+mappingId   claim_event
+target      :event{id} a :ClaimEvent ; :eventType {event_type}^^xsd:string ; :eventTimestamp {event_timestamp}^^xsd:dateTime .
+source      SELECT id, event_type, event_timestamp FROM claim_event
+
+mappingId   claim_event_amount
+target      :event{id} :eventAmount {event_amount}^^xsd:decimal .
+source      SELECT id, event_amount FROM claim_event WHERE event_amount IS NOT NULL
+
+mappingId   claim_hasEvent
+target      :claim{claim_id} :hasEvent :event{id} .
+source      SELECT id, claim_id FROM claim_event
+
+]]

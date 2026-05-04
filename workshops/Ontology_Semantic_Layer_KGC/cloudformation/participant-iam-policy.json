@@ -1,0 +1,90 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "NeptuneAccess",
+            "Effect": "Allow",
+            "Action": [
+                "neptune-db:*"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "NeptuneManagement",
+            "Effect": "Allow",
+            "Action": [
+                "rds:DescribeDBClusters",
+                "rds:DescribeDBInstances",
+                "rds:ListTagsForResource"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "BedrockAccess",
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:InvokeModel",
+                "bedrock:InvokeModelWithResponseStream",
+                "bedrock:ListFoundationModels",
+                "bedrock:CreateGuardrail",
+                "bedrock:ListGuardrails",
+                "bedrock:GetGuardrail",
+                "bedrock:UpdateGuardrail",
+                "bedrock:DeleteGuardrail",
+                "bedrock:ApplyGuardrail",
+                "aws-marketplace:ViewSubscriptions",
+                "aws-marketplace:Subscribe"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "SageMakerNotebook",
+            "Effect": "Allow",
+            "Action": [
+                "sagemaker:CreatePresignedNotebookInstanceUrl",
+                "sagemaker:DescribeNotebookInstance",
+                "sagemaker:ListNotebookInstances",
+                "sagemaker:StartNotebookInstance",
+                "sagemaker:StopNotebookInstance"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "S3Assets",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:ListBucket"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "CloudFormationReadOnly",
+            "Effect": "Allow",
+            "Action": [
+                "cloudformation:DescribeStacks",
+                "cloudformation:ListStacks",
+                "cloudformation:GetTemplate"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "EC2ReadOnly",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:Describe*"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "CloudWatchLogs",
+            "Effect": "Allow",
+            "Action": [
+                "logs:GetLogEvents",
+                "logs:DescribeLogStreams",
+                "logs:DescribeLogGroups"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

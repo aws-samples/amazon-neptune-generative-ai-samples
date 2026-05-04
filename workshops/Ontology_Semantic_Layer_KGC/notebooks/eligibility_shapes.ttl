@@ -1,0 +1,122 @@
+@prefix : <http://example.org/insurance#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# =============================================================================
+# Claim Eligibility Shapes
+# 
+# These shapes define business rules for whether a claim SHOULD be covered,
+# as opposed to the data-quality shapes in shapes.ttl which validate structure.
+#
+# When a claim fails these shapes, the SHACL violation report becomes the
+# machine-readable "denial reason" — no denial codes needed in the data.
+# =============================================================================
+
+# Rule 1: Claim must have active coverage at incident date
+# A claim is only eligible if the linked policy had a PolicyCoverage
+# whose validFrom <= incidentDate and (validTo > incidentDate OR no validTo).
+:ClaimHasActiveCoverageShape a sh:NodeShape ;
+    sh:targetClass :Claim ;
+    sh:sparql [
+        sh:message "Claim {?claimId} has no active policy coverage at incident date {?incidentDate}. Policy {?policyId} coverage periods do not include the incident date, indicating a coverage gap or lapse." ;
+        sh:prefixes : ;
+        sh:select """
+            PREFIX : <http://example.org/insurance#>
+            SELECT $this ?claimId ?incidentDate ?policyId
+            WHERE {
+                $this :claimId ?claimId ;
+                      :incidentDate ?incidentDate ;
+                      :forPolicy ?policy .
+                ?policy :policyId ?policyId .
+
+                FILTER NOT EXISTS {
+                    ?policy :hasCoverage ?coverage .
+                    ?coverage :validFrom ?validFrom .
+                    OPTIONAL { ?coverage :validTo ?validTo }
+                    FILTER (?validFrom <= ?incidentDate)
+                    FILTER (!BOUND(?validTo) || ?validTo > ?incidentDate)
+                }
+            }
+        """ ;
+    ] .
+
+# Rule 2: Claim amount must not exceed coverage amount (minus deductible)
+# The net payable coverage = coverageAmount - deductible. If the claim
+# exceeds that, it's not fully eligible under the policy terms.
+:ClaimWithinCoverageLimitShape a sh:NodeShape ;
+    sh:targetClass :Claim ;
+    sh:sparql [
+        sh:message "Claim {?claimId} amount ${?claimAmount} exceeds the net coverage limit of ${?netCoverage} (coverage ${?coverageAmount} minus deductible ${?deductible}) for policy {?policyId}." ;
+        sh:prefixes : ;
+        sh:select """
+            PREFIX : <http://example.org/insurance#>
+            SELECT $this ?claimId ?claimAmount ?coverageAmount ?deductible ?policyId
+                   ((?coverageAmount - ?deductible) AS ?netCoverage)
+            WHERE {
+                $this :claimId ?claimId ;
+                      :claimAmount ?claimAmount ;
+                      :incidentDate ?incidentDate ;
+                      :forPolicy ?policy .
+                ?policy :policyId ?policyId ;
+                        :hasCoverage ?coverage .
+                ?coverage :coverageAmount ?coverageAmount ;
+                         :deductible ?deductible ;
+                         :validFrom ?validFrom .
+                OPTIONAL { ?coverage :validTo ?validTo }
+
+                FILTER (?validFrom <= ?incidentDate)
+                FILTER (!BOUND(?validTo) || ?validTo > ?incidentDate)
+                FILTER (?claimAmount > (?coverageAmount - ?deductible))
+            }
+        """ ;
+    ] .
+
+# Rule 3: Claim must be filed (submitted event) within 90 days of incident
+# Late filing beyond the allowed window makes the claim ineligible.
+# We add a 90-day duration to the incident date to compute the deadline,
+# then check if the submission timestamp exceeds it.
+:ClaimFiledWithinWindowShape a sh:NodeShape ;
+    sh:targetClass :Claim ;
+    sh:sparql [
+        sh:message "Claim {?claimId} was filed on {?submittedDate}, which is after the 90-day filing deadline of {?deadline} (incident date: {?incidentDate}). Claims must be submitted within 90 days of the incident." ;
+        sh:prefixes : ;
+        sh:select """
+            PREFIX : <http://example.org/insurance#>
+            PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+            SELECT $this ?claimId ?incidentDate ?submittedDate
+                   ((?incidentDate + "P90D"^^xsd:duration) AS ?deadline)
+            WHERE {
+                $this :claimId ?claimId ;
+                      :incidentDate ?incidentDate ;
+                      :hasEvent ?submitEvent .
+                ?submitEvent :eventType "submitted" ;
+                             :eventTimestamp ?submittedDate .
+
+                FILTER (?submittedDate > (?incidentDate + "P90D"^^xsd:duration))
+            }
+        """ ;
+    ] .
+
+# Rule 4: Policy must not have multiple current coverages (ambiguous state)
+# If a policy has more than one isCurrent=true coverage, the claim cannot
+# be processed because the applicable coverage is ambiguous.
+:ClaimPolicyUnambiguousCoverageShape a sh:NodeShape ;
+    sh:targetClass :Claim ;
+    sh:sparql [
+        sh:message "Claim {?claimId} cannot be processed: policy {?policyId} has multiple active (isCurrent=true) coverage records, making the applicable coverage ambiguous." ;
+        sh:prefixes : ;
+        sh:select """
+            PREFIX : <http://example.org/insurance#>
+            SELECT $this ?claimId ?policyId
+            WHERE {
+                $this :claimId ?claimId ;
+                      :forPolicy ?policy .
+                ?policy :policyId ?policyId ;
+                        :hasCoverage ?cov1 ;
+                        :hasCoverage ?cov2 .
+                ?cov1 :isCurrent true .
+                ?cov2 :isCurrent true .
+                FILTER (?cov1 != ?cov2)
+            }
+        """ ;
+    ] .

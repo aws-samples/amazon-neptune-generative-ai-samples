@@ -1,0 +1,190 @@
+@prefix : <http://example.org/insurance#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+# =============================================================================
+# Ontology Metadata
+# =============================================================================
+
+: a owl:Ontology ;
+    rdfs:label "Insurance Claims Ontology" ;
+    rdfs:comment "An OWL ontology for modeling insurance claims, policies, coverage history (SCD Type 2), and claim lifecycle events." ;
+    owl:versionInfo "1.0.0" ;
+    dcterms:creator "AWS Semantic Layer Workshop" .
+
+# =============================================================================
+# Classes
+# =============================================================================
+
+:Claim a owl:Class ;
+    rdfs:label "Claim" ;
+    rdfs:comment "An insurance claim filed by a customer against a policy." ;
+    owl:disjointWith :Policy, :PolicyCoverage, :ClaimEvent, :Customer .
+
+:Policy a owl:Class ;
+    rdfs:label "Policy" ;
+    rdfs:comment "An insurance policy held by a customer, with one or more coverage periods." ;
+    owl:disjointWith :PolicyCoverage, :ClaimEvent, :Customer .
+
+:PolicyCoverage a owl:Class ;
+    rdfs:label "Policy Coverage" ;
+    rdfs:comment "A versioned coverage record representing policy terms at a point in time (SCD Type 2). A policy may have multiple non-overlapping coverage periods." ;
+    owl:disjointWith :ClaimEvent, :Customer .
+
+:ClaimEvent a owl:Class ;
+    rdfs:label "Claim Event" ;
+    rdfs:comment "A lifecycle event on a claim, representing a state transition in the claims process." ;
+    owl:disjointWith :Customer .
+
+:Customer a owl:Class ;
+    rdfs:label "Customer" ;
+    rdfs:comment "A policyholder — the person or entity that holds an insurance policy." .
+
+# =============================================================================
+# Claim Properties
+# =============================================================================
+
+:claimId a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "claim ID" ;
+    rdfs:comment "Unique identifier for the claim." ;
+    rdfs:domain :Claim ;
+    rdfs:range xsd:string .
+
+:claimAmount a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "claim amount" ;
+    rdfs:comment "The monetary amount of the claim as filed." ;
+    rdfs:domain :Claim ;
+    rdfs:range xsd:decimal .
+
+:incidentDate a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "incident date" ;
+    rdfs:comment "The date and time the insured incident occurred." ;
+    rdfs:domain :Claim ;
+    rdfs:range xsd:dateTime .
+
+:forPolicy a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:label "for policy" ;
+    rdfs:comment "The policy against which this claim is filed." ;
+    rdfs:domain :Claim ;
+    rdfs:range :Policy .
+
+:hasEvent a owl:ObjectProperty ;
+    rdfs:label "has event" ;
+    rdfs:comment "A lifecycle event associated with this claim." ;
+    rdfs:domain :Claim ;
+    rdfs:range :ClaimEvent .
+
+:netPayable a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "net payable" ;
+    rdfs:comment "Derived property: the amount the insurer owes after applying the deductible. Computed via SPARQL CONSTRUCT, not stored in source data." ;
+    rdfs:domain :Claim ;
+    rdfs:range xsd:decimal .
+
+# =============================================================================
+# Claim Event Properties
+# =============================================================================
+
+:eventType a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "event type" ;
+    rdfs:comment "The type of this claim event. One of: submitted, approved, denied, paid, adjusted." ;
+    rdfs:domain :ClaimEvent ;
+    rdfs:range xsd:string .
+
+:eventTimestamp a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "event timestamp" ;
+    rdfs:comment "The date and time this event occurred." ;
+    rdfs:domain :ClaimEvent ;
+    rdfs:range xsd:dateTime .
+
+:eventAmount a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "event amount" ;
+    rdfs:comment "The monetary amount associated with this event, if applicable." ;
+    rdfs:domain :ClaimEvent ;
+    rdfs:range xsd:decimal .
+
+# =============================================================================
+# Policy Properties
+# =============================================================================
+
+:policyId a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "policy ID" ;
+    rdfs:comment "Unique identifier for the policy." ;
+    rdfs:domain :Policy ;
+    rdfs:range xsd:string .
+
+:policyType a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "policy type" ;
+    rdfs:comment "The category of this policy. One of: FSA, HSA, HRA." ;
+    rdfs:domain :Policy ;
+    rdfs:range xsd:string .
+
+:heldBy a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:label "held by" ;
+    rdfs:comment "The customer who holds this policy." ;
+    rdfs:domain :Policy ;
+    rdfs:range :Customer .
+
+:hasCoverage a owl:ObjectProperty ;
+    rdfs:label "has coverage" ;
+    rdfs:comment "A coverage period associated with this policy." ;
+    rdfs:domain :Policy ;
+    rdfs:range :PolicyCoverage .
+
+# =============================================================================
+# Policy Coverage Properties
+# =============================================================================
+
+:coverageAmount a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "coverage amount" ;
+    rdfs:comment "The maximum coverage amount for this coverage period." ;
+    rdfs:domain :PolicyCoverage ;
+    rdfs:range xsd:decimal .
+
+:deductible a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "deductible" ;
+    rdfs:comment "The deductible amount the policyholder must pay before coverage applies." ;
+    rdfs:domain :PolicyCoverage ;
+    rdfs:range xsd:decimal .
+
+:premium a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "premium" ;
+    rdfs:comment "The periodic premium payment for this coverage period." ;
+    rdfs:domain :PolicyCoverage ;
+    rdfs:range xsd:decimal .
+
+:validFrom a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "valid from" ;
+    rdfs:comment "The start date of this coverage period." ;
+    rdfs:domain :PolicyCoverage ;
+    rdfs:range xsd:dateTime .
+
+:validTo a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "valid to" ;
+    rdfs:comment "The end date of this coverage period. Absent if the coverage is currently active." ;
+    rdfs:domain :PolicyCoverage ;
+    rdfs:range xsd:dateTime .
+
+:isCurrent a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "is current" ;
+    rdfs:comment "Whether this is the currently active coverage period for the policy." ;
+    rdfs:domain :PolicyCoverage ;
+    rdfs:range xsd:boolean .
+
+# =============================================================================
+# Customer Properties
+# =============================================================================
+
+:customerId a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "customer ID" ;
+    rdfs:comment "Unique identifier for the customer." ;
+    rdfs:domain :Customer ;
+    rdfs:range xsd:string .
+
+:customerName a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "customer name" ;
+    rdfs:comment "The full name of the customer." ;
+    rdfs:domain :Customer ;
+    rdfs:range xsd:string .

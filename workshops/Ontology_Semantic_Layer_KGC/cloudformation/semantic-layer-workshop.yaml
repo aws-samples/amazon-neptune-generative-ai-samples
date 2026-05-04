@@ -1,0 +1,637 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Semantic Layer Workshop — Neptune Serverless + Ontop VKG on ECS Fargate +
+  SageMaker Notebook. Deploys all infrastructure for the ontology-based
+  semantic layer workshop.
+
+Parameters:
+  MyAssetsBucketName:
+    Type: String
+    Description: Workshop Studio assets bucket name
+  MyAssetsBucketPrefix:
+    Type: String
+    Description: Workshop Studio assets bucket prefix (ends with /)
+
+# ============================================================================
+# Resources
+# ============================================================================
+Resources:
+
+  # --------------------------------------------------------------------------
+  # VPC — 2 AZs, public + private subnets, 1 NAT Gateway
+  # --------------------------------------------------------------------------
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-vpc'
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  IGWAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.0.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-1'
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-2'
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-private-1'
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.3.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-private-2'
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt ElasticIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: IGWAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway
+
+  PrivateSubnet1RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  S3VPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcId: !Ref VPC
+      RouteTableIds:
+        - !Ref PublicRouteTable
+        - !Ref PrivateRouteTable
+
+  # --------------------------------------------------------------------------
+  # Neptune Serverless — 2.5–8 NCU, public endpoint, IAM auth
+  # --------------------------------------------------------------------------
+  NeptuneSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Neptune SPARQL access on 8182 - VPC only
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8182
+          ToPort: 8182
+          CidrIp: 10.0.0.0/16
+          Description: SPARQL from within VPC
+
+  NeptuneSubnetGroup:
+    Type: AWS::Neptune::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Neptune private subnets
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+  NeptuneClusterParamGroup:
+    Type: AWS::Neptune::DBClusterParameterGroup
+    Properties:
+      Family: neptune1.4
+      Description: Workshop cluster params - audit logs
+      Parameters:
+        neptune_enable_audit_log: '1'
+
+  NeptuneDbParamGroup:
+    Type: AWS::Neptune::DBParameterGroup
+    Properties:
+      Family: neptune1.4
+      Description: Workshop instance params - 2 min query timeout
+      Parameters:
+        neptune_query_timeout: '120000'
+
+  NeptuneCluster:
+    Type: AWS::Neptune::DBCluster
+    Properties:
+      EngineVersion: 1.4.7.0
+      DBSubnetGroupName: !Ref NeptuneSubnetGroup
+      DBClusterParameterGroupName: !Ref NeptuneClusterParamGroup
+      VpcSecurityGroupIds:
+        - !Ref NeptuneSG
+      IamAuthEnabled: true
+      DeletionProtection: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-neptune'
+
+  NeptuneInstance:
+    Type: AWS::Neptune::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref NeptuneCluster
+      DBInstanceClass: db.r8g.xlarge
+      DBParameterGroupName: !Ref NeptuneDbParamGroup
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-neptune-instance'
+
+  # --------------------------------------------------------------------------
+  # Neptune Notebook — SageMaker notebook with Neptune graph_notebook
+  # --------------------------------------------------------------------------
+  NotebookRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSageMakerFullAccess
+      Policies:
+        - PolicyName: WorkshopNotebookPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - neptune-db:*
+                Resource: !Sub 'arn:aws:neptune-db:${AWS::Region}:${AWS::AccountId}:${NeptuneCluster.ClusterResourceId}/*'
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                  - bedrock:ListFoundationModels
+                  - bedrock:CreateGuardrail
+                  - bedrock:ListGuardrails
+                  - bedrock:GetGuardrail
+                  - bedrock:UpdateGuardrail
+                  - bedrock:DeleteGuardrail
+                  - bedrock:ApplyGuardrail
+                  - aws-marketplace:ViewSubscriptions
+                  - aws-marketplace:Subscribe
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub 'arn:aws:s3:::${MyAssetsBucketName}'
+                  - !Sub 'arn:aws:s3:::${MyAssetsBucketName}/*'
+                  - 'arn:aws:s3:::aws-neptune-notebook'
+                  - 'arn:aws:s3:::aws-neptune-notebook/*'
+
+  NotebookLifecycleConfig:
+    Type: AWS::SageMaker::NotebookInstanceLifecycleConfig
+    Properties:
+      OnStart:
+        - Content:
+            Fn::Base64: !Sub |
+              #!/bin/bash
+
+              sudo -u ec2-user -i <<EOF
+
+              echo "export GRAPH_NOTEBOOK_AUTH_MODE=IAM" >> ~/.bashrc
+              echo "export GRAPH_NOTEBOOK_SSL=True" >> ~/.bashrc
+              echo "export GRAPH_NOTEBOOK_SERVICE=neptune-db" >> ~/.bashrc
+              echo "export GRAPH_NOTEBOOK_HOST=${NeptuneCluster.Endpoint}" >> ~/.bashrc
+              echo "export GRAPH_NOTEBOOK_PORT=8182" >> ~/.bashrc
+              echo "export NEPTUNE_LOAD_FROM_S3_ROLE_ARN=" >> ~/.bashrc
+              echo "export AWS_REGION=${AWS::Region}" >> ~/.bashrc
+
+              aws s3 cp s3://aws-neptune-notebook/graph_notebook.tar.gz /tmp/graph_notebook.tar.gz
+              rm -rf /tmp/graph_notebook
+              tar -zxvf /tmp/graph_notebook.tar.gz -C /tmp
+              chmod +x /tmp/graph_notebook/install_jl4x.sh
+              /tmp/graph_notebook/install_jl4x.sh
+
+              # Install workshop Python dependencies into the Jupyter conda env
+              /home/ec2-user/anaconda3/envs/JupyterSystemEnv/bin/pip install pyshacl strands-agents strands-agents-bedrock
+
+              # Copy workshop files from S3 assets bucket
+              mkdir -p /home/ec2-user/SageMaker/semantic-layer-workshop
+              aws s3 cp `echo "s3://${MyAssetsBucketName}/${MyAssetsBucketPrefix}" | sed 's|/assets/|/static/notebook/|'` /home/ec2-user/SageMaker/semantic-layer-workshop/ --recursive
+
+              # Inject Ontop endpoint into notebooks
+              python3 /home/ec2-user/SageMaker/semantic-layer-workshop/patch_notebooks.py "http://${OntopALB.DNSName}" "/home/ec2-user/SageMaker/semantic-layer-workshop"
+
+              EOF
+
+  NotebookInstance:
+    Type: AWS::SageMaker::NotebookInstance
+    Properties:
+      NotebookInstanceName: !Sub 'aws-neptune-${AWS::StackName}'
+      InstanceType: ml.m7i.2xlarge
+      RoleArn: !GetAtt NotebookRole.Arn
+      SubnetId: !Ref PrivateSubnet1
+      SecurityGroupIds:
+        - !Ref NeptuneSG
+      DirectInternetAccess: Enabled
+      LifecycleConfigName: !GetAtt NotebookLifecycleConfig.NotebookInstanceLifecycleConfigName
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-notebook'
+        - Key: aws-neptune-cluster-id
+          Value: !Ref NeptuneCluster
+        - Key: aws-neptune-resource-id
+          Value: !GetAtt NeptuneCluster.ClusterResourceId
+
+  # --------------------------------------------------------------------------
+  # Ontop VKG — ECR + CodeBuild + ECS Fargate + ALB
+  # --------------------------------------------------------------------------
+  OntopECR:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: ontop-vkg-workshop
+      EmptyOnDelete: true
+
+  OntopALBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Ontop ALB - HTTP on 80 from VPC only
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 10.0.0.0/16
+          Description: HTTP from within VPC
+
+  OntopECSSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Ontop ECS task - 8080 from ALB
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref OntopALBSG
+
+  OntopALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internal
+      Subnets:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      SecurityGroups:
+        - !Ref OntopALBSG
+
+  OntopTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref VPC
+      Port: 8080
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 60
+      HealthyThresholdCount: 3
+
+  OntopListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref OntopALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref OntopTargetGroup
+
+  OntopECSCluster:
+    Type: AWS::ECS::Cluster
+
+  OntopTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  OntopTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    DependsOn: OntopBuildTrigger
+    Properties:
+      Family: !Sub '${AWS::StackName}-ontop'
+      Cpu: '1024'
+      Memory: '2048'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !GetAtt OntopTaskExecutionRole.Arn
+      ContainerDefinitions:
+        - Name: ontop
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${OntopECR}:latest'
+          PortMappings:
+            - ContainerPort: 8080
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref OntopLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ontop
+
+  OntopLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/${AWS::StackName}-ontop'
+      RetentionInDays: 7
+
+  OntopService:
+    Type: AWS::ECS::Service
+    DependsOn: OntopListener
+    Properties:
+      Cluster: !Ref OntopECSCluster
+      TaskDefinition: !Ref OntopTaskDef
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2
+          SecurityGroups:
+            - !Ref OntopECSSG
+      LoadBalancers:
+        - ContainerName: ontop
+          ContainerPort: 8080
+          TargetGroupArn: !Ref OntopTargetGroup
+
+  # --------------------------------------------------------------------------
+  # CodeBuild — builds Ontop Docker image and pushes to ECR
+  # --------------------------------------------------------------------------
+  OntopBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: OntopBuildPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:PutImage
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                Resource: !GetAtt OntopECR.Arn
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub 'arn:aws:s3:::${MyAssetsBucketName}'
+                  - !Sub 'arn:aws:s3:::${MyAssetsBucketName}/*'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  OntopBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub '${AWS::StackName}-ontop-build'
+      ServiceRole: !GetAtt OntopBuildRole.Arn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: ECR_REPO
+            Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${OntopECR}'
+          - Name: ASSETS_BUCKET
+            Value: !Ref MyAssetsBucketName
+          - Name: ASSETS_PREFIX
+            Value: !Ref MyAssetsBucketPrefix
+          - Name: AWS_DEFAULT_REGION
+            Value: !Ref AWS::Region
+      Source:
+        Type: NO_SOURCE
+        BuildSpec: |
+          version: 0.2
+          phases:
+            pre_build:
+              commands:
+                - aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_REPO
+            build:
+              commands:
+                - mkdir -p build/input build/ontop-cli
+                - CLEAN_PREFIX=$(echo $ASSETS_PREFIX | sed 's|assets/$||')
+                - aws s3 cp s3://$ASSETS_BUCKET/${CLEAN_PREFIX}static/vkg/ build/ --recursive
+                - mv build/insurance.obda build/insurance.properties build/insurance.owl build/insurance.sql build/input/
+                - unzip -o build/ontop-cli.zip -d build/ontop-cli/
+                - cp build/h2.jar build/ontop-cli/jdbc/
+                - cd build
+                - docker build -t $ECR_REPO:latest .
+            post_build:
+              commands:
+                - docker push $ECR_REPO:latest
+
+  # Lambda-backed custom resource to trigger CodeBuild
+  OntopBuildTriggerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CodeBuildStart
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codebuild:StartBuild
+                  - codebuild:BatchGetBuilds
+                Resource: !GetAtt OntopBuildProject.Arn
+
+  OntopBuildTriggerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 900
+      Role: !GetAtt OntopBuildTriggerRole.Arn
+      Code:
+        ZipFile: |
+          import boto3, time, json, urllib3
+
+          def send_response(event, context, status, data={}):
+            body = json.dumps({
+              'Status': status,
+              'Reason': data.get('Error', 'See CloudWatch'),
+              'PhysicalResourceId': context.log_stream_name,
+              'StackId': event['StackId'],
+              'RequestId': event['RequestId'],
+              'LogicalResourceId': event['LogicalResourceId'],
+              'Data': data
+            })
+            urllib3.PoolManager().request('PUT', event['ResponseURL'], body=body,
+              headers={'Content-Type': ''})
+
+          def handler(event, context):
+            try:
+              if event['RequestType'] == 'Delete':
+                send_response(event, context, 'SUCCESS')
+                return
+              cb = boto3.client('codebuild')
+              build = cb.start_build(projectName=event['ResourceProperties']['ProjectName'])
+              bid = build['build']['id']
+              while context.get_remaining_time_in_millis() > 30000:
+                time.sleep(15)
+                r = cb.batch_get_builds(ids=[bid])
+                status = r['builds'][0]['buildStatus']
+                if status == 'SUCCEEDED':
+                  send_response(event, context, 'SUCCESS', {'BuildId': bid})
+                  return
+                elif status in ('FAILED', 'FAULT', 'STOPPED', 'TIMED_OUT'):
+                  send_response(event, context, 'FAILED', {'Error': f'Build {status}'})
+                  return
+              send_response(event, context, 'FAILED', {'Error': 'Lambda timeout waiting for build'})
+            except Exception as e:
+              send_response(event, context, 'FAILED', {'Error': str(e)})
+
+  OntopBuildTrigger:
+    Type: Custom::OntopBuild
+    DependsOn:
+      - OntopBuildProject
+      - OntopECR
+    Properties:
+      ServiceToken: !GetAtt OntopBuildTriggerFunction.Arn
+      ProjectName: !Ref OntopBuildProject
+
+# ============================================================================
+# Outputs
+# ============================================================================
+Outputs:
+  NeptuneEndpoint:
+    Description: Neptune cluster endpoint (use with port 8182)
+    Value: !GetAtt NeptuneCluster.Endpoint
+
+  NeptuneSparqlUrl:
+    Description: Neptune SPARQL endpoint URL
+    Value: !Sub 'https://${NeptuneCluster.Endpoint}:8182/sparql'
+
+  OntopSparqlEndpoint:
+    Description: Ontop VKG SPARQL endpoint URL
+    Value: !Sub 'http://${OntopALB.DNSName}/sparql'
+
+  NotebookUrl:
+    Description: SageMaker Notebook URL
+    Value: !Sub 'https://${AWS::Region}.console.aws.amazon.com/sagemaker/home?region=${AWS::Region}#/notebook-instances/${NotebookInstance.NotebookInstanceName}'
+
+  NotebookInstance:
+    Description: SageMaker Notebook instance name
+    Value: !Ref NotebookInstance

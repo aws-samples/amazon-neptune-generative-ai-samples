@@ -11,7 +11,7 @@ anthropic==0.50.0
 anthropic-bedrock==0.8.0
 anyio==4.9.0
 attrs==25.3.0
-banks==2.1.2
+banks==2.4.2
 beautifulsoup4==4.13.4
 blis==0.7.11
 boto3==1.36.1

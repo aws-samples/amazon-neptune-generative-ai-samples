@@ -81,7 +81,7 @@ packaging==24.1
 pandas==2.2.3
 pillow==12.2.0
 protobuf==5.29.5
-pyarrow==17.0.0
+pyarrow==23.0.1
 pydantic==2.9.2
 pydantic-settings==2.5.2
 pydantic_core==2.23.4

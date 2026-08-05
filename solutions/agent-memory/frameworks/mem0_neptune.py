@@ -1,87 +1,61 @@
-import boto3
-from dotenv import load_dotenv
+"""Mem0 integration with Amazon Neptune Analytics and Amazon Bedrock.
+
+Mem0 1.x supports both vector_store and graph_store with Neptune Analytics.
+Neptune Analytics serves as both the vector store (embeddings) and graph store
+(entity relationships) in a single resource.
+
+Required environment variables:
+    MEM0_NEPTUNE_ENDPOINT - Neptune Analytics endpoint (neptune-graph://<graph-id>)
+    BEDROCK_MODEL_ID - Bedrock model for LLM (optional, defaults to Claude Sonnet 4)
+
+Authentication uses the standard AWS credential chain.
+"""
+
 import os
-from opensearchpy import RequestsHttpConnection, AWSV4SignerAuth
+from dotenv import load_dotenv
 from mem0.memory.main import Memory
 
 load_dotenv()
 
+BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-sonnet-4-6")
+
 
 class Mem0Demo():
     def __init__(self, user_id: str):
-        region = boto3.Session().region_name
-        service = 'aoss'
-        credentials = boto3.Session().get_credentials()
-        auth = AWSV4SignerAuth(credentials, region, service)
+        neptune_endpoint = os.getenv("MEM0_NEPTUNE_ENDPOINT", "")
 
         config = {
+            "llm": {
+                "provider": "aws_bedrock",
+                "config": {
+                    "model": BEDROCK_MODEL_ID,
+                    "temperature": 0.1,
+                    "max_tokens": 2000
+                }
+            },
             "embedder": {
                 "provider": "aws_bedrock",
                 "config": {
                     "model": "amazon.titan-embed-text-v2:0"
                 }
             },
-            "llm": {
-                "provider": "aws_bedrock",
-                "config": {
-                    "model": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
-                    "temperature": 0.1,
-                    "max_tokens": 2000
-                }
-            },
             "vector_store": {
-                "provider": "opensearch",
+                "provider": "neptune",
                 "config": {
                     "collection_name": "mem0",
-                    "host": os.getenv("MEM0_AOSS_ENDPOINT"),
-                    "port": 443,
-                    "http_auth": auth,
-                    "connection_class": RequestsHttpConnection,
-                    "pool_maxsize": 20,
-                    "use_ssl": True,
-                    "verify_certs": True,
-                    "embedding_model_dims": 1024,
+                    "endpoint": neptune_endpoint,
                 }
             },
             "graph_store": {
                 "provider": "neptune",
                 "config": {
-                    "endpoint": os.getenv("MEM0_NEPTUNE_ENDPOINT")
-                },
-            },
-            "llm": {
-                "provider": "aws_bedrock",
-                "config": {
-                    "model": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
-                    "temperature": 0.1,
-                    "max_tokens": 2000
+                    "endpoint": neptune_endpoint,
                 }
-            },
-            "vector_store": {
-                "provider": "opensearch",
-                "config": {
-                    "collection_name": "mem0",
-                    "host": os.getenv("MEM0_AOSS_ENDPOINT"),
-                    "port": 443,
-                    "http_auth": auth,
-                    "connection_class": RequestsHttpConnection,
-                    "pool_maxsize": 20,
-                    "use_ssl": True,
-                    "verify_certs": True,
-                    "embedding_model_dims": 1024,
-                }
-            },
-            "graph_store": {
-                "provider": "neptune",
-                "config": {
-                    "endpoint": os.getenv("MEM0_NEPTUNE_ENDPOINT")
-                },
             },
         }
+
         self.user_id = user_id
-        # Initialize the memory system
         self.client = Memory.from_config(config)
 
     async def reset(self):
         self.client.delete_all(self.user_id)
-

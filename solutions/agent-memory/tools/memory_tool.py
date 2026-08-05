@@ -1,24 +1,27 @@
-from strands.models import BedrockModel
-from strands.agent.conversation_manager import SlidingWindowConversationManager
-from strands import tool
-from frameworks import Mem0Demo
-from strands import Agent
-from .weather_agent import weather_agent
+"""Core memory agent — a generic memory-enabled agent with configurable persona and backend.
 
-
-# Define agent
-system_prompt = """You are an assistant that creates helpful responses based on retrieved memories.
-Use the provided memories to create a natural, conversational response to the user's question.  
-If you have no memories of me then the first thing you should search the first thing you should do is load 
-them using search_memory tool.  If you have no memories than do not add one, 
-just ask me about a trip I want to take.  
-
-If I ask about the weather in an area that is located in the United Statesß then please use the weather tool.
-
+Configuration:
+    AGENT_CONFIG - Which agent persona to use (default: "default")
+    MEMORY_FRAMEWORK - Which memory backend to use: mem0, cognee, graphiti (default: "mem0")
+    BEDROCK_MODEL_ID - Bedrock model for the agent LLM
 """
 
+import os
+from dotenv import load_dotenv
+from strands.models import BedrockModel
+from strands import tool, Agent
+from frameworks.memory_backend import get_memory_backend
+from examples import load_agent_config
+
+load_dotenv()
+
+# Load agent configuration (persona, system prompt, extra tools)
+agent_config = load_agent_config()
+
+BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-sonnet-4-6")
+
 model = BedrockModel(
-    model_id="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+    model_id=BEDROCK_MODEL_ID,
     max_tokens=64000,
     additional_request_fields={
         "thinking": {
@@ -27,27 +30,31 @@ model = BedrockModel(
     },
 )
 
-memory = Mem0Demo("")
+# Initialize the memory backend (mem0, cognee, or graphiti)
+memory = get_memory_backend()
+
 
 @tool
 def search_memory(query):
+    """Search the user's stored memories for relevant information."""
     user_id = memory_agent.state.get('user_id')
-    results = memory.client.search(query, user_id=user_id)
+    results = memory.search(query, user_id)
     return results
+
 
 @tool
 def add_memory(query):
+    """Store new information in the user's memory for future recall."""
     user_id = memory_agent.state.get('user_id')
-    results = memory.client.add(query, user_id=user_id)
+    results = memory.add(query, user_id)
     return results
 
 
+# Build the tool list: core memory tools + any extras from the agent config
+tools = [search_memory, add_memory] + agent_config.EXTRA_TOOLS
+
 memory_agent = Agent(
-        model=model,
-        system_prompt=system_prompt,
-        tools=[
-            search_memory,
-            add_memory,
-            weather_agent
-        ]
-    )
+    model=model,
+    system_prompt=agent_config.SYSTEM_PROMPT,
+    tools=tools,
+)

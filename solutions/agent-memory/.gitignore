@@ -169,3 +169,6 @@ cache.db*
 .cognee_system
 .data_storage
 *.whl
+
+# Build logs
+build.log

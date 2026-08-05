@@ -23,7 +23,7 @@ async def main():
     cognee = await load_cognee(user_id)
 
     print("********************* Mem0 Search *********************")
-    resp = mem0.client.search("What information do you know about me?", user_id=user_id)
+    resp = mem0.client.search("What information do you know about me?", filters={"user_id": user_id})
     print(resp)
 
     print("********************* Graphiti Search *********************")

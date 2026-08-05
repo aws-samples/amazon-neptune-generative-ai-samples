@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "agent-memory": {
+      "command": "uv",
+      "args": ["run", "--directory", ".", "python", "mcp_server.py"],
+      "env": {
+        "MEMORY_FRAMEWORK": "cognee"
+      }
+    }
+  }
+}

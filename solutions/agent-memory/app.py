@@ -1,16 +1,14 @@
 import streamlit as st
 import json
-from strands import Agent
-from strands_tools import calculator, current_time
-from tools.memory_tool import memory_agent
+from tools.memory_tool import memory_agent, agent_config
 
 # Initialize session state for conversation history
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # Add title on the page
-st.title("Agent Memory Demo")
-st.write("This demo shows how to use Strands to create a travel assistant that can manage travel and preferences with a memory.")
+st.title(agent_config.AGENT_NAME)
+st.write(agent_config.AGENT_DESCRIPTION)
 
 
 def handle_selection():
@@ -19,7 +17,7 @@ def handle_selection():
 
 with st.sidebar:
     user_id = st.selectbox("Current User:",
-        ['Alice', 'Bob', 'Chris'],
+        agent_config.USERS,
         on_change=handle_selection
              )
 
@@ -35,7 +33,7 @@ if "start_index" not in st.session_state:
 # Display chat messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        st.empty()  # This forces the container to render without adding visible content (workaround for streamlit bug)
+        st.empty()
         st.markdown(message["content"])
 
 # Chat input
@@ -46,36 +44,35 @@ if prompt := st.chat_input("Ask your agent..."):
     # Clear previous tool usage details
     if "details_placeholder" in st.session_state:
         st.session_state.details_placeholder.empty()
-    
+
     # Display user message
     with st.chat_message("user"):
         st.write(prompt)
-    
+
     # Get response from agent
     with st.spinner("Thinking..."):
         st.session_state.agent.state.set('user_id', user_id)
         response = st.session_state.agent(prompt)
-    
+
     # Extract the assistant's response text
     assistant_response = ""
     for m in st.session_state.agent.messages:
         if m.get("role") == "assistant" and m.get("content"):
             for content_item in m.get("content", []):
                 if "text" in content_item:
-                    # We keep only the last response of the assistant
                     assistant_response = content_item["text"]
                     break
-    
+
     # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant", "content": assistant_response})
-    
+
     # Display assistant response
     with st.chat_message("assistant"):
-        
-        start_index = st.session_state.start_index      
+
+        start_index = st.session_state.start_index
 
         # Display last messages from agent, with tool usage detail if any
-        st.session_state.details_placeholder = st.empty()  # Create a new placeholder
+        st.session_state.details_placeholder = st.empty()
         with st.session_state.details_placeholder.container():
             for m in st.session_state.agent.messages[start_index:]:
                 if m.get("role") == "assistant":
@@ -88,7 +85,7 @@ if prompt := st.chat_input("Ask your agent..."):
                             tool_input = tool_use.get("input", {})
                             st.info(f"Using tool: {tool_name}")
                             st.code(json.dumps(tool_input, indent=2))
-            
+
                 elif m.get("role") == "user":
                     for content_item in m.get("content", []):
                         if "toolResult" in content_item:
@@ -100,4 +97,3 @@ if prompt := st.chat_input("Ask your agent..."):
 
         # Update the number of previous messages
         st.session_state.start_index = len(st.session_state.agent.messages)
-    

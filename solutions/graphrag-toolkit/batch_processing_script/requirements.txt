@@ -44,7 +44,7 @@ filelock==3.20.3
 filetype==1.2.0
 FlagEmbedding==1.3.4
 frozenlist==1.6.0
-fsspec==2024.12.0
+fsspec==2026.6.0
 google-auth==2.39.0
 graphrag_toolkit @ https://github.com/awslabs/graphrag-toolkit/archive/refs/tags/v2.5.1.zip#sha256=c7cc0fdb54cb6f309811603e3b2e87ced3a4dd9add91d54c4982f84be0208e9f
 greenlet==3.2.1

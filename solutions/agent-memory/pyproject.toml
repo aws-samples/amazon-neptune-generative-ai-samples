@@ -33,7 +33,10 @@ markers = [
 ]
 
 [tool.uv]
-# Force Pillow 13 (critical CVE fixes). fastembed 0.8.0 declares pillow<13, and
-# moving to fastembed 0.9 requires cognee 1.6.6, which caps huggingface-hub<1 and
-# would downgrade transformers to a vulnerable 4.x release.
-override-dependencies = ["pillow>=13.0.0,<14"]
+# cognee 1.6.x declares huggingface-hub<1, but transformers>=5.10 (needed for
+# transformers security fixes) requires huggingface-hub>=1.5.
+override-dependencies = ["huggingface-hub>=1.5,<2"]
+# Security floor (not a direct dependency): filelock <=4.2.0 has a high-severity
+# advisory. Newest litellm (1.106.x) declares filelock<4, so the resolver
+# settles on a slightly older litellm (still above its own security fix).
+constraint-dependencies = ["filelock>=4.2.1"]

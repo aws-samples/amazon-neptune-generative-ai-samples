@@ -31,3 +31,9 @@ asyncio_mode = "auto"
 markers = [
     "integration: tests that require real AWS infrastructure (Neptune, OpenSearch, Bedrock)",
 ]
+
+[tool.uv]
+# Force Pillow 13 (critical CVE fixes). fastembed 0.8.0 declares pillow<13, and
+# moving to fastembed 0.9 requires cognee 1.6.6, which caps huggingface-hub<1 and
+# would downgrade transformers to a vulnerable 4.x release.
+override-dependencies = ["pillow>=13.0.0,<14"]

@@ -290,7 +290,7 @@ Resources:
               /tmp/graph_notebook/install_jl4x.sh
 
               # Install workshop Python dependencies into the Jupyter conda env
-              /home/ec2-user/anaconda3/envs/JupyterSystemEnv/bin/pip install pyshacl strands-agents strands-agents-bedrock
+              /home/ec2-user/anaconda3/envs/JupyterSystemEnv/bin/pip install pyshacl strands-agents
 
               # Copy workshop files from S3 assets bucket
               mkdir -p /home/ec2-user/SageMaker/semantic-layer-workshop

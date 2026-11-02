@@ -25,7 +25,7 @@ filelock==3.20.3
 frozenlist==1.4.1
 fsspec==2026.6.0
 gitdb==4.0.11
-GitPython==3.1.62
+GitPython==3.2.1
 greenlet==3.1.1
 h11==0.16.0
 httpcore==1.0.5
@@ -73,7 +73,7 @@ mypy-extensions==1.0.0
 narwhals==1.8.4
 nest-asyncio==1.6.0
 networkx==3.3
-nltk==3.10.3
+nltk==3.10.4
 numpy==1.26.4
 openai==1.50.1
 orjson==3.11.6
@@ -87,7 +87,7 @@ pydantic-settings==2.5.2
 pydantic_core==2.23.4
 pydeck==0.9.1
 Pygments==2.20.0
-pypdf==6.21.2
+pypdf==6.21.4
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
 pytz==2024.2

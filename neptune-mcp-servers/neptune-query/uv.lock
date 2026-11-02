@@ -491,7 +491,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "langchain-aws", specifier = ">=0.2.19" },
-    { name = "mcp", extras = ["cli"], specifier = ">=1.6.0" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.30.0,<2" },
 ]
 
 [[package]]

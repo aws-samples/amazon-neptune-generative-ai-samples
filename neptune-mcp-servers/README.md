@@ -10,7 +10,12 @@ This repo contains the following MCP servers:
 
 ### [Neptune Query Server](./neptune-query/README.md) (Deprecated)
 
-Update 5/16/2025- The Neptune Query server has been moved to the AWSLabs MCP repo [here](https://github.com/awslabs/mcp/blob/main/src/amazon-neptune-mcp-server/README.md).
+> [!WARNING]
+> This server is deprecated and no longer maintained. Use the official
+> [Amazon Neptune MCP Server](https://awslabs.github.io/mcp/servers/amazon-neptune-mcp-server/)
+> ([`awslabs.amazon-neptune-mcp-server`](https://pypi.org/project/awslabs.amazon-neptune-mcp-server/))
+> from the [AWS Labs MCP repository](https://github.com/awslabs/mcp/tree/main/src/amazon-neptune-mcp-server),
+> which provides the same capabilities. See the [migration notes](./neptune-query/README.md#migrating-to-the-official-server).
 
 A server that allows for running queries on Amazon Neptune.
 

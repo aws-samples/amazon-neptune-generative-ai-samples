@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "langchain-aws>=0.2.19",
-    "mcp[cli]>=1.6.0",
+    "mcp[cli]>=1.30.0,<2",
 ]
 
 [project.scripts]

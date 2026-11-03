@@ -1,0 +1,277 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Building Generative AI applications using knowledge graphs in Amazon Neptune.
+  Creates two Neptune Analytics graphs and a SageMaker notebook instance with the
+  workshop notebooks and the sample Streamlit application. Deploy it with the
+  GNUmakefile in this folder, which uploads the workshop assets first.
+
+Parameters:
+  AssetsBucketName:
+    Type: String
+    Description: >-
+      S3 bucket that holds the workshop assets uploaded by `make upload`. It must be
+      in the same Region as this stack, because Neptune Analytics loads data only from
+      buckets in the graph's Region.
+    MinLength: 3
+  AssetsBucketPrefix:
+    Type: String
+    Description: Key prefix of the workshop assets in the bucket. Leave empty, or end it with a slash.
+    Default: ''
+    AllowedPattern: '^$|^[A-Za-z0-9!_.*()/-]*/$'
+    ConstraintDescription: Must be empty or end with a slash.
+  NotebookName:
+    Type: String
+    Description: >-
+      Suffix of the notebook instance name. The instance is named aws-neptune-<NotebookName>,
+      which is the prefix the Neptune console uses to list notebooks.
+    Default: genai-workshop
+    AllowedPattern: '^[a-zA-Z0-9](-*[a-zA-Z0-9])*$'
+    MaxLength: 51
+  NotebookInstanceType:
+    Type: String
+    Description: SageMaker notebook instance type.
+    Default: ml.t3.medium
+    AllowedValues:
+      - ml.t3.medium
+      - ml.t3.large
+      - ml.t3.xlarge
+      - ml.m5.xlarge
+      - ml.m6i.xlarge
+      - ml.m7i.xlarge
+  LlmModelId:
+    Type: String
+    Description: >-
+      Amazon Bedrock model or inference profile used by the sample application. The default
+      is Claude Sonnet 5.5 through the US cross-region inference profile.
+    Default: us.anthropic.claude-sonnet-5-5
+
+Conditions:
+  IsIadRegion: !Equals [!Ref 'AWS::Region', us-east-1]
+
+Resources:
+  # Graph used by the finished sample application (port 8080). Loaded by the notebook's
+  # startup script on its first start.
+  DemoGraph:
+    Type: AWS::NeptuneGraph::Graph
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      DeletionProtection: false
+      ProvisionedMemory: 32
+      ReplicaCount: 0
+      PublicConnectivity: true
+      VectorSearchConfiguration:
+        VectorSearchDimension: 256
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-demo'
+        - Key: resource-id
+          Value: graphrag-workshop
+
+  # Graph that the workshop notebooks connect to and load as they go
+  ChatbotGraph:
+    Type: AWS::NeptuneGraph::Graph
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      DeletionProtection: false
+      ProvisionedMemory: 32
+      ReplicaCount: 0
+      PublicConnectivity: true
+      VectorSearchConfiguration:
+        VectorSearchDimension: 256
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-chatbot'
+        - Key: resource-id
+          Value: graphrag-workshop
+
+  NotebookRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: GenAIWorkshopNotebook
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: QueryAndLoadTheWorkshopGraphs
+                Effect: Allow
+                Action: neptune-graph:*
+                Resource:
+                  - !GetAtt DemoGraph.GraphArn
+                  - !GetAtt ChatbotGraph.GraphArn
+              - Sid: InvokeBedrockModels
+                Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource:
+                  # Cross-region inference profiles route to foundation models in other Regions
+                  - arn:aws:bedrock:*::foundation-model/*
+                  - !Sub 'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*'
+              - Sid: EnableMarketplaceModelsOnFirstUse
+                Effect: Allow
+                Action:
+                  - aws-marketplace:ViewSubscriptions
+                  - aws-marketplace:Subscribe
+                Resource: '*'
+              - Sid: ReadWorkshopAssets
+                Effect: Allow
+                Action: s3:GetObject
+                Resource:
+                  - !Sub 'arn:aws:s3:::${AssetsBucketName}/${AssetsBucketPrefix}*'
+                  - arn:aws:s3:::aws-neptune-notebook/*
+                  - !Sub 'arn:aws:s3:::aws-neptune-notebook-${AWS::Region}/*'
+              - Sid: ListWorkshopAssets
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: !Sub 'arn:aws:s3:::${AssetsBucketName}'
+              - Sid: NotebookLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:DescribeLogStreams
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/sagemaker/*'
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/sagemaker/*:*'
+              - Sid: FindOwnNotebookUrl
+                Effect: Allow
+                Action: sagemaker:DescribeNotebookInstance
+                Resource: !Sub 'arn:aws:sagemaker:${AWS::Region}:${AWS::AccountId}:notebook-instance/aws-neptune-${NotebookName}'
+
+  NotebookLifecycleConfig:
+    Type: AWS::SageMaker::NotebookInstanceLifecycleConfig
+    Properties:
+      OnStart:
+        - Content:
+            Fn::Base64: !Sub
+              - |
+                #!/bin/bash
+                # Runs as root on every start of the notebook instance. SageMaker stops
+                # startup scripts after 5 minutes, so the slower workshop setup runs in the
+                # background and logs to /home/ec2-user/SageMaker/.workshop/setup.log.
+                set -e
+
+                # Python 3.12 for the Streamlit application environment. The notebook kernels
+                # use Python 3.10, which the current Streamlit and Pillow releases don't support.
+                # The package is on the root volume, which is reset when the instance stops.
+                dnf install -y -q python3.12 python3.12-pip
+
+                sudo -u ec2-user -i <<'EOF'
+                set -e
+                echo "export GRAPH_NOTEBOOK_AUTH_MODE=IAM" >> ~/.bashrc
+                echo "export GRAPH_NOTEBOOK_SSL=True" >> ~/.bashrc
+                echo "export GRAPH_NOTEBOOK_SERVICE=neptune-graph" >> ~/.bashrc
+                echo "export GRAPH_NOTEBOOK_HOST=${ChatbotGraph.Endpoint}" >> ~/.bashrc
+                echo "export GRAPH_NOTEBOOK_PORT=8182" >> ~/.bashrc
+                echo "export NEPTUNE_LOAD_FROM_S3_ROLE_ARN=" >> ~/.bashrc
+                echo "export AWS_REGION=${AWS::Region}" >> ~/.bashrc
+                echo "export AWS_DEFAULT_REGION=${AWS::Region}" >> ~/.bashrc
+
+                # Install graph-notebook for JupyterLab 4 from the Neptune notebook bucket
+                aws s3 cp s3://${NotebookBucket}/graph_notebook.tar.gz /tmp/graph_notebook.tar.gz
+                rm -rf /tmp/graph_notebook
+                tar -zxf /tmp/graph_notebook.tar.gz -C /tmp
+                chmod +x /tmp/graph_notebook/install_jl4x.sh
+                /tmp/graph_notebook/install_jl4x.sh
+
+                mkdir -p /home/ec2-user/SageMaker/.workshop
+                cat > /home/ec2-user/SageMaker/.workshop/setup.sh <<'SETUP'
+                #!/bin/bash
+                set -ex
+                ASSETS=$(echo "${AssetsBucketName}/${AssetsBucketPrefix}" | sed 's#/$##')
+                WORK=/home/ec2-user/SageMaker/.workshop
+                NOTEBOOKS=/home/ec2-user/SageMaker/Neptune/00-Workshop-Start-HERE
+                APP=$WORK/sbom-pgi-chatbot
+                VENV=$WORK/venv
+                export AWS_REGION=${AWS::Region} AWS_DEFAULT_REGION=${AWS::Region}
+
+                # First start only: copy the notebooks and fill in the assets location, so
+                # participants' edits are kept when the instance restarts
+                if [ ! -f $WORK/.notebooks-copied ]; then
+                  mkdir -p $NOTEBOOKS
+                  aws s3 cp s3://$ASSETS/notebooks/ $NOTEBOOKS/ --recursive --only-show-errors
+                  sed -i "s#__WORKSHOP_ASSETS__#$ASSETS#g" $NOTEBOOKS/*.ipynb
+                  touch $WORK/.notebooks-copied
+                fi
+
+                # First start only: load the SBOM and GraphRAG data into the demo graph
+                if [ ! -f $WORK/.demo-graph-loaded ]; then
+                  aws neptune-graph execute-query --graph-identifier ${DemoGraph.GraphId} \
+                    --language OPEN_CYPHER \
+                    --query-string "MATCH (n) DETACH DELETE n WITH collect(n) AS cnt CALL neptune.load({format: 'csv', source: 's3://$ASSETS/sbom_data/', failOnError: false, concurrency: 1}) YIELD totalRecords RETURN totalRecords" \
+                    $WORK/demo-graph-load.json
+                  touch $WORK/.demo-graph-loaded
+                fi
+
+                # The finished application and its Python environment are on the
+                # persistent volume, so they are reused after a restart
+                if [ ! -d $APP ]; then
+                  aws s3 cp s3://$ASSETS/sbom-pgi-chatbot.tar.gz /tmp/sbom-pgi-chatbot.tar.gz --only-show-errors
+                  tar -zxf /tmp/sbom-pgi-chatbot.tar.gz -C $WORK
+                fi
+                printf 'HOST=%s\nAWS_REGION=%s\nLLM_MODEL=%s\n' ${DemoGraph.GraphId} ${AWS::Region} ${LlmModelId} > $APP/.env
+                if [ ! -x $VENV/bin/streamlit ]; then
+                  rm -rf $VENV
+                  python3.12 -m venv $VENV
+                  $VENV/bin/pip install --quiet --upgrade pip
+                  $VENV/bin/pip install --quiet -r $APP/requirements.txt
+                fi
+
+                cd $APP
+                nohup $VENV/bin/streamlit run Home.py --server.port 8080 --server.headless true \
+                  --browser.gatherUsageStats false > $WORK/streamlit.log 2>&1 &
+
+                # Tell the notebooks where the application and its environment are
+                NAME=$(jq -r .ResourceName /opt/ml/metadata/resource-metadata.json)
+                URL=$(aws sagemaker describe-notebook-instance --notebook-instance-name $NAME --query Url --output text)
+                jq -n --arg url "https://$URL/" --arg streamlit "$VENV/bin/streamlit" --arg assets "s3://$ASSETS" \
+                  '{notebook_url: $url, streamlit: $streamlit, assets: $assets}' > $WORK/config.json
+                echo "Workshop setup complete"
+                SETUP
+                chmod +x /home/ec2-user/SageMaker/.workshop/setup.sh
+                EOF
+
+                sudo -u ec2-user -i bash -c 'nohup /home/ec2-user/SageMaker/.workshop/setup.sh > /home/ec2-user/SageMaker/.workshop/setup.log 2>&1 &'
+              - NotebookBucket: !If [IsIadRegion, aws-neptune-notebook, !Sub 'aws-neptune-notebook-${AWS::Region}']
+
+  NotebookInstance:
+    Type: AWS::SageMaker::NotebookInstance
+    Properties:
+      NotebookInstanceName: !Sub 'aws-neptune-${NotebookName}'
+      InstanceType: !Ref NotebookInstanceType
+      PlatformIdentifier: notebook-al2023-v1
+      RoleArn: !GetAtt NotebookRole.Arn
+      LifecycleConfigName: !GetAtt NotebookLifecycleConfig.NotebookInstanceLifecycleConfigName
+      InstanceMetadataServiceConfiguration:
+        MinimumInstanceMetadataServiceVersion: '2'
+      Tags:
+        - Key: aws-neptune-analytics-graph-endpoint
+          Value: !GetAtt ChatbotGraph.Endpoint
+
+Outputs:
+  NotebookUrl:
+    Description: JupyterLab on the notebook instance. Open 00-Workshop-Start-HERE in the Neptune folder.
+    Value: !Sub 'https://aws-neptune-${NotebookName}.notebook.${AWS::Region}.sagemaker.aws/lab'
+  StreamlitUrl:
+    Description: >-
+      The finished sample application. It is available a few minutes after the notebook
+      instance starts; progress is logged in /home/ec2-user/SageMaker/.workshop/setup.log.
+    Value: !Sub 'https://aws-neptune-${NotebookName}.notebook.${AWS::Region}.sagemaker.aws/proxy/8080/'
+  NotebookInstanceName:
+    Value: !GetAtt NotebookInstance.NotebookInstanceName
+  DemoGraphId:
+    Description: Graph used by the finished sample application
+    Value: !GetAtt DemoGraph.GraphId
+  ChatbotGraphId:
+    Description: Graph used by the workshop notebooks
+    Value: !GetAtt ChatbotGraph.GraphId

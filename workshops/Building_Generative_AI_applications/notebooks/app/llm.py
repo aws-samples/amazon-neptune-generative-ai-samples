@@ -3,7 +3,7 @@ Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 SPDX-License-Identifier: MIT-0
 """
 
-from llama_index.llms.bedrock import Bedrock
+from llama_index.llms.bedrock_converse import BedrockConverse
 from llama_index.embeddings.bedrock import BedrockEmbedding
 from llama_index.graph_stores.neptune import NeptuneAnalyticsPropertyGraphStore
 from llama_index.core import PropertyGraphIndex, Settings
@@ -19,17 +19,24 @@ from DefinedDomainQA import DefinedDomainQA
 # load the environment variables from .env file
 load_dotenv()
 
-# Fetch configuration issues and set local variables to pass to the
+# Fetch the configuration and set local variables
 host: str = os.getenv("HOST")
+# Claude Sonnet 5.5 through the US cross-region inference profile
+llm_model: str = os.getenv("LLM_MODEL", "us.anthropic.claude-sonnet-5-5")
+# The stored embeddings were created with Titan Text Embeddings V2 at 256 dimensions,
+# so changing this model requires re-creating the embeddings in the graph and persist/
+embeddings_model: str = os.getenv("EMBEDDINGS_MODEL", "amazon.titan-embed-text-v2:0")
+# None lets boto3 use its normal region lookup (AWS_REGION, AWS_DEFAULT_REGION, profile)
+region: str | None = os.getenv("AWS_REGION")
 
-# Setup the llm to use Bedrock and the provided model name
-llm = Bedrock(
-    model="anthropic.claude-3-sonnet-20240229-v1:0", temperature=0, context_size=200000
-)
+# Setup the llm to use the Bedrock Converse API and the provided model name
+llm = BedrockConverse(model=llm_model, temperature=0, region_name=region)
 Settings.llm = llm
 # Setup the embedding model to use Bedrock and the provided model name
 embed_model = BedrockEmbedding(
-    model_name="amazon.titan-embed-text-v2:0", additional_kwargs={"dimensions": 256}
+    model_name=embeddings_model,
+    region_name=region,
+    additional_kwargs={"dimensions": 256},
 )
 Settings.embed_model = embed_model
 

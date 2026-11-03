@@ -1,0 +1,13 @@
+# Packages used by the code cells of notebooks 2, 3 and 4, installed into the notebook
+# kernel by the first code cell of each notebook.
+#
+# The Streamlit application is not installed here. It runs from its own Python 3.12
+# environment that the notebook instance's startup script creates, so that its
+# dependencies don't change the environment that runs JupyterLab and graph-notebook.
+llama-index-core==0.14.25
+llama-index-embeddings-bedrock==0.9.0
+llama-index-graph-stores-neptune==0.6.0
+llama-index-llms-bedrock-converse==0.15.5
+llama-index-readers-file==0.7.0
+nest-asyncio==1.6.0
+pydantic==2.14.2

@@ -1,10 +1,8 @@
 # Building Generative AI applications using knowledge graphs in Amazon Neptune
 
-**Note** - This workshop currently only works in the us-west-2 region
-
 In this workshop, you'll learn how to leverage generative AI and graphs to create an application that queries your domain-specific, differentiated, and highly related datasets using natural language. Amazon Neptune will store your knowledge graph, ensuring that the data is up-to-date and accessible. The application will use natural language processing and vector search techniques to retrieve relevant information from your knowledge graph. 
 
-To participate, bring a laptop. This workshop is for development teams, software engineers, architects, system administrators, data engineers, and data scientists who want to build knowledge systems using AI and graphs. The workshop will last approximately 2 hours, although with the optional content it may take longer.  This workshop can only be run using Workshop Studio in the us-west-2 region.
+To participate, bring a laptop. This workshop is for development teams, software engineers, architects, system administrators, data engineers, and data scientists who want to build knowledge systems using AI and graphs. The workshop will last approximately 2 hours, although with the optional content it may take longer.
 
 Throughout this workshop we will be playing the part of a builder on an internal security team where you are assigned to work on a high priority project to provide tooling to provide improve your security posture through exposing software dependencies and vulnerabilities using Software Bill of Materials (SBOMs).
 
@@ -38,11 +36,78 @@ Notebooks 2, 3, and 4 contain both a walkthrough section as well as an optional 
 
 ## Prerequisites
 
-To run this workshop you need to first enable the following models in Amazon Bedrock for your account in `us-west-2` following the directions [here](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access-modify.html).
+- An AWS account, and AWS CLI v2 credentials with permission to create the resources below and an S3 bucket.
+- A Region where Amazon Neptune Analytics and Amazon Bedrock are available. The sample application uses Claude Sonnet 5.5 through the US cross-region inference profile (`us.anthropic.claude-sonnet-5-5`), so use a US Region, or set `LLM_MODEL` to a model or inference profile that is available in your Region.
+- Access to these Amazon Bedrock models. Bedrock enables most models on first use; for Anthropic models, a first-time use case form may need to be submitted for the account. See [Access Amazon Bedrock foundation models](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html).
+  - Anthropic Claude Sonnet 5.5
+  - Amazon Titan Text Embeddings V2
+- On the machine you deploy from: GNU Make 3.81 or later (included with macOS and most Linux distributions), `rsync` and `tar`. `cfn-lint` (or `uv`, to run it) is optional and used by `make lint`.
 
-* Amazon Titan Text Embeddings V2
-* Anthropic Claude 3 Sonnet
+## What gets deployed
+
+The [CloudFormation template](./cloudformation/workshop.yaml) creates:
+
+- Two Neptune Analytics graphs with 32 m-NCUs each: one that the notebooks use, and one that holds the data for the finished sample application.
+- An `ml.t3.medium` SageMaker notebook instance running Amazon Linux 2023 and JupyterLab 4, with the Neptune graph notebook installed.
+- An IAM role for the notebook instance that can query the two graphs, invoke Bedrock models, and read the workshop assets.
+
+When the notebook instance first starts, it copies the workshop notebooks into `Neptune/00-Workshop-Start-HERE`, loads the demo graph, and starts the finished application from its own Python 3.12 environment. This takes a few minutes after the stack finishes.
+
+These resources are billed while they exist, mainly the two graphs. Delete the stack when you're done (see [Cleaning up](#cleaning-up)).
 
 ## Getting Started
 
-To get started we have provided a Cloudformation template that will create the required infrastructure, 2 32mNCU Neptune Analytics graphs and 1 Neptune Notebook. The template is available [here](./workshop.yml) and can be executed following the steps [here](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stack.html).  Please ensure that you name the stack `workshop` or portions of the notebook may not function correctly when trying to retrieve the completed application.
+The [`GNUmakefile`](./GNUmakefile) in this folder builds and deploys everything from this repository:
+
+```bash
+cd workshops/Building_Generative_AI_applications
+make deploy
+```
+
+`make deploy` runs these steps in order:
+
+1. `bucket` - creates an S3 bucket for the workshop assets in your account, named `neptune-genai-workshop-<account>-<region>`, if it doesn't exist. Neptune Analytics loads data only from buckets in the graph's Region, so the bucket is in the same Region as the stack.
+2. `package` - stages the notebooks, the data in [`assets/`](./assets), and the finished application from [`solutions/sbom-pgi-chatbot`](../../solutions/sbom-pgi-chatbot) into `build/stage`.
+3. `upload` - syncs `build/stage` to `s3://<bucket>/<stack name>/`.
+4. Deploys the stack with `aws cloudformation deploy`, then prints its outputs.
+
+When it finishes, open the `NotebookUrl` output and go to `Neptune/00-Workshop-Start-HERE`, starting with `1-Introduction.ipynb`. Run `make outputs` to show the URLs again.
+
+Settings can be changed on the command line:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `AWS_PROFILE` | the default credential chain | AWS CLI profile |
+| `AWS_REGION` | the profile's Region | Region for the stack and the assets bucket |
+| `STACK_NAME` | `genai-workshop` | Stack name. The notebook instance is named `aws-neptune-<STACK_NAME>`. |
+| `LLM_MODEL` | `us.anthropic.claude-sonnet-5-5` | Bedrock model or inference profile for the sample application |
+| `NOTEBOOK_INSTANCE_TYPE` | `ml.t3.medium` | Notebook instance type |
+| `BUCKET` | `neptune-genai-workshop-<account>-<region>` | Assets bucket |
+| `PREFIX` | `<STACK_NAME>/` | Key prefix for the assets in the bucket |
+
+For example: `make deploy AWS_PROFILE=workshop AWS_REGION=us-west-2 STACK_NAME=my-workshop`. Run `make help` to list all targets.
+
+The notebook instance copies the notebooks only on its first start, so that changes you make to them are kept when the instance restarts. To give an existing instance updated notebooks, delete the stack and deploy it again.
+
+### Using Workshop Studio
+
+The template takes the location of the assets as the `AssetsBucketName` and `AssetsBucketPrefix` parameters, so it can also be run from Workshop Studio. Run `make package`, upload the contents of `build/stage` to the event's assets location, and pass that bucket and prefix to the template.
+
+## Troubleshooting
+
+On the notebook instance, open a terminal and check:
+
+- `~/SageMaker/.workshop/setup.log` - the background setup: copying the notebooks, loading the demo graph, and installing and starting the finished application.
+- `~/SageMaker/.workshop/streamlit.log` - the finished application on port 8080.
+
+The notebook cells that open the application read `~/SageMaker/.workshop/config.json`, which the setup writes when it finishes. If those cells report that the file doesn't exist, wait for the setup to finish and run the cell again.
+
+## Cleaning up
+
+```bash
+make delete          # deletes the stack, including both graphs and the notebook instance
+make delete-assets   # deletes this stack's assets from the bucket
+make delete-bucket   # deletes the bucket, once it is empty
+```
+
+Each command asks for confirmation; add `CONFIRM=yes` to skip it. Use the same `AWS_PROFILE`, `AWS_REGION` and `STACK_NAME` values that you deployed with.

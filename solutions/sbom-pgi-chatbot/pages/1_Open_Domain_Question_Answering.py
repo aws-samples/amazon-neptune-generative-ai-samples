@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT-0
 import streamlit as st
 from llm import open_domain_qa
 from utils import write_messages, create_display
+from DisplayResult import DisplayResult
 
 # Store LLM generated responses
 if "messages_nlq" not in st.session_state.keys():
@@ -37,9 +38,18 @@ def run_query(prompt: str):
 
         with st.spinner(f"Executing using natural language query translation ..."):
             with st.chat_message("assistant"):
-                response = open_domain_qa.run_natural_language_query(
-                    prompt, st.session_state.summarize
-                )
+                if "delete" in prompt.lower():
+                    response = DisplayResult(
+                        """I don't think you really want to do this, the query generated will remove all data from the 
+                        graph.  In a production system, appropriate guardrails, such as IAM role permissions, 
+                        should be put into place to prevent accidental deletion or modification of data.""",
+                        display_format=DisplayResult.DisplayFormat.STRING,
+                        status=DisplayResult.Status.ERROR,
+                    )
+                else:
+                    response = open_domain_qa.run_natural_language_query(
+                        prompt, st.session_state.summarize
+                    )
                 create_display(response)
                 with st.popover("Query"):
                     st.code(response.explanation)
@@ -80,7 +90,7 @@ with st.sidebar:
             "How many Vulnerabilities exist?",
             """Find me the components that have 'high' or 'critical' vulnerabilities?  Return the component and number of vulnerabilities grouped by severity. 
 Group by component and severity count, order by component then by severity""",
-            "Delete all data in the database    ",
+            "Delete all data in the database",
         ),
     )
 

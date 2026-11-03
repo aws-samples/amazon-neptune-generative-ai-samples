@@ -8,8 +8,7 @@ import ast
 from DisplayResult import DisplayResult
 from typing import List
 from llama_index.core.indices.property_graph import TextToCypherRetriever
-from langchain_community.chains.graph_qa.cypher_utils import CypherQueryCorrector
-from langchain_community.chains.graph_qa.cypher_utils import Schema
+from cypher_validator import CypherQueryCorrector, Schema
 from llama_index.graph_stores.neptune import (
     NeptuneQueryException,
     NeptuneAnalyticsPropertyGraphStore,

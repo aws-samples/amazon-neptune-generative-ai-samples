@@ -77,7 +77,7 @@ with st.sidebar:
         (
             f"Find me information about _____",
             f"Find me documents and vulnerabilities associated with _____",
-            f"Find me all the documents that share component _____ and their vulnerabilties",
+            f"Find me all the documents that share component _____ and their vulnerabilities",
             "Delete all data in the database",
         ),
     )

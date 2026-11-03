@@ -75,7 +75,7 @@ class DefinedDomainQA:
 
             - COMPONENT_NEIGHBORHOOD_QUERY: Find information about vulnerabilities and documents connected to a component
             
-            - SHARED_COMPONENT_QUERY: Find information about shared components across documents
+            - SHARED_COMPONENT_QUERY: Find information about documents that share a component
 
             - UNKNOWN: Choose this if the query doesn’t fall into any of the other intents.
                 

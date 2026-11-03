@@ -32,12 +32,19 @@ The documents used for the graph enhanced RAG portions of this example are eithe
 or was synthetically generated (Example Corp Software Bill of Material.docx) to represent non-public internal documentation and policies.
 
 ### Loading the Data
-To use this application you will need to setup a single Neptune Analytics graph with an m-NCU of at least 32.  
+The quickest way to run this application is the workshop in [`workshops/Building_Generative_AI_applications`](../../workshops/Building_Generative_AI_applications), whose `make deploy` creates the graph, loads the data, and runs this application on the notebook instance.
 
-Once you have created the graph you will need to load the data locations in `/data/sbom` into the SBOM cluster using the Neptune Bulk loader.  
-Instructions for using the bulk loader are available here: (Neptune Bulk Loader)[https://docs.aws.amazon.com/neptune/latest/userguide/bulk-load.html]
+To run it yourself, you need a single Neptune Analytics graph with at least 32 m-NCUs and vector search enabled with a dimension of 256, which matches the stored Titan Text Embeddings V2 embeddings.
 
-The data for the RAG and GraphRAG workflows will be created and stored into the cluster on the first run using the PDF files located in `/data/kg_enhanced_rag`.
+The data for the graph is in [`workshops/Building_Generative_AI_applications/assets/sbom_data`](../../workshops/Building_Generative_AI_applications/assets/sbom_data). It contains both the SBOM data and the entities and chunks, with their embeddings, used by the Graph Enhanced RAG page. Copy the folder to an S3 bucket in the same Region as the graph, then load it with openCypher (see [Batch load](https://docs.aws.amazon.com/neptune-analytics/latest/userguide/batch-load.html)):
+
+```
+CALL neptune.load({format: 'csv', source: 's3://<bucket>/<prefix>/sbom_data/'})
+YIELD totalRecords
+RETURN totalRecords
+```
+
+The `persist/` folder holds the saved LlamaIndex indexes that match this data, so the application doesn't need to rebuild them.
 
 ## Security
 
@@ -57,18 +64,22 @@ Note: Within the library the `botocore` library is used to fetch the credentials
 This application uses [dotenv](https://pypi.org/project/python-dotenv/) to manage the configuration.  To use this you will need to create a `.env` file and put in the information below
 
 ```
-# The Cluster Endpoint for the SBOM cluster
+# The graph identifier of the Neptune Analytics graph
 HOST="your-sbom-neptune-analytics-graph-identifier"
+# The Region of the graph and of the Bedrock calls
+AWS_REGION="us-east-1"
 
-# The LLM used to perform extraction.
-LLM_MODEL="anthropic.claude-3-sonnet-20240229-v1:0"
-# The LLM used to compute embeddings and perform vector search.
-EMBEDDINGS_MODEL="amazon.titan-embed-text-v1"
+# Optional. The Bedrock model or inference profile used for query generation and answers.
+# Defaults to Claude Sonnet 5.5 through the US cross-region inference profile.
+LLM_MODEL="us.anthropic.claude-sonnet-5-5"
+# Optional. The embedding model. The stored embeddings were created with Titan Text
+# Embeddings V2 at 256 dimensions, so changing this requires re-creating them.
+EMBEDDINGS_MODEL="amazon.titan-embed-text-v2:0"
 ```
 
 ## Running the Application
 
-Setup your virtual environment
+The application requires Python 3.11 or later. Setup your virtual environment
 
 ```
 python -m venv ./venv
@@ -83,6 +94,12 @@ pip install -r requirements.txt
 To run the application:
 ```
 streamlit run Home.py
+```
+
+To run the unit tests for the query validator in `cypher_validator.py`, which don't need AWS access:
+```
+pip install pytest
+python -m pytest tests
 ```
 
 Once you run the application the terminal will give you the IP and port that you can use to connect to the UI.

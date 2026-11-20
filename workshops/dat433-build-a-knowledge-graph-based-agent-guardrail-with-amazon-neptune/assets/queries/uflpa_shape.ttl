@@ -1,0 +1,46 @@
+# MIT No Attribution
+#
+# Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this
+# software and associated documentation files (the "Software"), to deal in the Software
+# without restriction, including without limitation the rights to use, copy, modify,
+# merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+# SPDX-License-Identifier: MIT-0
+
+# The UFLPA rule as a SHACL-SPARQL shape: an order to a U.S. region is a violation when its
+# supplier sources, at any tier, from a company on the UFLPA Entity List. The property path
+# nc:sourcesFrom+ walks the chain to any depth, like -[:SOURCES_FROM*1..]-> in openCypher.
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix nc: <https://anycompany.example/procurement#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+nc: a owl:Ontology ;
+    sh:declare [ sh:prefix "nc" ; sh:namespace "https://anycompany.example/procurement#"^^<http://www.w3.org/2001/XMLSchema#anyURI> ] .
+
+nc:OrderUflpaShape a sh:NodeShape ;
+    sh:targetClass nc:PurchaseOrder ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:severity sh:Violation ;
+        sh:message "Sources, at some tier, from {?name}, on the UFLPA Entity List" ;
+        sh:prefixes nc: ;
+        sh:select """
+            SELECT $this ?value ?name WHERE {
+                $this nc:supplier ?supplier ; nc:region ?region .
+                ?region nc:country "US" .
+                ?supplier nc:sourcesFrom+ ?value .
+                ?value nc:onList ?list ; nc:name ?name .
+                ?list nc:name "UFLPA Entity List" .
+            }
+        """ ;
+    ] .

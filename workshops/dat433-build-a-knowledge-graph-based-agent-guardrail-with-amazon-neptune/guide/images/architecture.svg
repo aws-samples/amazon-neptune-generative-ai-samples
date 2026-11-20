@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="540" viewBox="0 0 1080 540" role="img" aria-label="Architecture: the procurement team&#x27;s request goes to Claude on AgentCore Runtime; before any tool runs, your hook gets the validation report from Neptune and stock from DynamoDB, then lets the tool run or cancels it and returns the reasons">
+<title>Architecture: the procurement team&#x27;s request goes to Claude on AgentCore Runtime; before any tool runs, your hook gets the validation report from Neptune and stock from DynamoDB, then lets the tool run or cancels it and returns the reasons</title>
+<rect width="1080" height="540" fill="#ffffff"/>
+<defs><marker id="a-15803d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#15803d"/></marker><marker id="s-15803d" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10 0L0 5L10 10z" fill="#15803d"/></marker><marker id="a-b91c1c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#b91c1c"/></marker><marker id="s-b91c1c" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10 0L0 5L10 10z" fill="#b91c1c"/></marker><marker id="a-1d4ed8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1d4ed8"/></marker><marker id="s-1d4ed8" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10 0L0 5L10 10z" fill="#1d4ed8"/></marker><marker id="a-7e22ce" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#7e22ce"/></marker><marker id="s-7e22ce" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10 0L0 5L10 10z" fill="#7e22ce"/></marker><marker id="a-475569" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#475569"/></marker><marker id="s-475569" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10 0L0 5L10 10z" fill="#475569"/></marker></defs>
+<rect x="180" y="14" width="700" height="512" rx="12" fill="#eef6fc" stroke="#9cc3e0" stroke-width="1.5"/>
+<text x="198" y="38" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#1e4e79" text-anchor="start">Workshop VPC</text>
+<rect x="198" y="54" width="664" height="210" rx="12" fill="#f3f1fb" stroke="#c4b5fd" stroke-width="1.5"/>
+<text x="216" y="78" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#4c1d95" text-anchor="start">Amazon Bedrock AgentCore Runtime · the procurement agent (Strands Agents)</text>
+<rect x="14" y="132" width="140" height="92" rx="10" fill="#f1f4f8" stroke="none" stroke-width="1.5"/>
+<text x="84.0" y="158" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Procurement</text>
+<text x="84.0" y="178" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">team</text>
+<rect x="222" y="118" width="170" height="120" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+<text x="307.0" y="144" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Claude Sonnet 5</text>
+<text x="307.0" y="164" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">Amazon Bedrock</text>
+<text x="307.0" y="181" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">chooses the tool calls</text>
+<rect x="450" y="118" width="170" height="120" rx="10" fill="#ffffff" stroke="#6d4ae0" stroke-width="2.5"/>
+<text x="535.0" y="144" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">NeptuneGuardPlugin</text>
+<text x="535.0" y="164" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">BeforeToolCallEvent</text>
+<text x="535.0" y="181" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">runs before every call</text>
+<rect x="491.0" y="107" width="88" height="22" rx="11" fill="#6d4ae0" stroke="none" stroke-width="1.5"/>
+<text x="535.0" y="122" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">your hook</text>
+<rect x="678" y="118" width="166" height="120" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+<text x="761.0" y="144" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Action tools</text>
+<text x="761.0" y="164" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">draft_purchase_order</text>
+<text x="761.0" y="181" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">send_offer_reply</text>
+<text x="761.0" y="198" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">(no checks inside)</text>
+<rect x="450" y="380" width="170" height="120" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+<text x="535.0" y="406" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Amazon Neptune</text>
+<text x="535.0" y="426" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">supplier knowledge graph</text>
+<text x="535.0" y="443" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">violations.cypher:</text>
+<text x="535.0" y="460" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">every rule, with evidence</text>
+<rect x="910" y="380" width="160" height="120" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+<text x="990.0" y="406" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Amazon DynamoDB</text>
+<text x="990.0" y="426" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">stock counts</text>
+<text x="990.0" y="443" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">(warehouse, product)</text>
+<text x="990.0" y="460" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#475569" text-anchor="middle">via gateway endpoint</text>
+<path d="M154 178 L220 178" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#a-475569)" marker-start="url(#s-475569)"/>
+<circle cx="186" cy="154" r="11" fill="#475569"/>
+<text x="186" y="158.5" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+<text x="18" y="252" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">1  request in</text>
+<text x="18" y="271" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">5  reply, with reasons</text>
+<path d="M392 160 L448 160" fill="none" stroke="#15803d" stroke-width="2.4" marker-end="url(#a-15803d)"/>
+<circle cx="420" cy="140" r="11" fill="#15803d"/>
+<text x="420" y="144.5" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+<path d="M448 205 L394 205" fill="none" stroke="#b91c1c" stroke-width="2.4" marker-end="url(#a-b91c1c)"/>
+<circle cx="420" cy="226" r="11" fill="#b91c1c"/>
+<text x="420" y="230.5" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">4b</text>
+<path d="M620 178 L676 178" fill="none" stroke="#15803d" stroke-width="2.4" marker-end="url(#a-15803d)"/>
+<circle cx="648" cy="157" r="11" fill="#15803d"/>
+<text x="648" y="161.5" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">4a</text>
+<path d="M520 240 L520 378" fill="none" stroke="#1d4ed8" stroke-width="2.4" marker-end="url(#a-1d4ed8)" marker-start="url(#s-1d4ed8)"/>
+<circle cx="520" cy="300" r="11" fill="#1d4ed8"/>
+<text x="520" y="304.5" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+<text x="536" y="304" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#1d4ed8" text-anchor="start">validation report</text>
+<path d="M590 240 L590 350 L990 350 L990 378" fill="none" stroke="#7e22ce" stroke-width="2.4" marker-end="url(#a-7e22ce)" marker-start="url(#s-7e22ce)"/>
+<circle cx="760" cy="350" r="11" fill="#7e22ce"/>
+<text x="760" y="354.5" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+<text x="776" y="342" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#7e22ce" text-anchor="start">stock, by key</text>
+<circle cx="214" cy="384" r="11" fill="#15803d"/>
+<text x="214" y="388.5" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+<text x="232" y="388" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#0f172a" text-anchor="start">Claude proposes a tool call</text>
+<circle cx="214" cy="408" r="11" fill="#1d4ed8"/>
+<text x="214" y="412.5" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+<text x="232" y="412" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#0f172a" text-anchor="start">your hook gets the report</text>
+<circle cx="214" cy="432" r="11" fill="#15803d"/>
+<text x="214" y="436.5" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">4a</text>
+<text x="232" y="436" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#0f172a" text-anchor="start">no violations: tool runs</text>
+<circle cx="214" cy="456" r="11" fill="#b91c1c"/>
+<text x="214" y="460.5" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">4b</text>
+<text x="232" y="460" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#0f172a" text-anchor="start">violations: call cancelled,</text>
+<text x="232" y="484" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#0f172a" text-anchor="start">reasons go back to Claude</text>
+</svg>

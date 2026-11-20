@@ -1,0 +1,1579 @@
+# MIT No Attribution
+#
+# Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this
+# software and associated documentation files (the "Software"), to deal in the Software
+# without restriction, including without limitation the rights to use, copy, modify,
+# merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+# SPDX-License-Identifier: MIT-0
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  DAT408 Workshop Infrastructure - AI Agent Observability with DynamoDB & Neptune
+  
+  Provisions the full infrastructure for the DAT408 re:Invent builders session:
+  - Neptune Analytics graph (compliance explanation layer)
+  - DynamoDB applications table (loan application store)
+  - Bedrock Knowledge Base + S3 data source (lending policy RAG)
+  - Lambda function (DynamoDB Streams → Neptune transform)
+  - Event Source Mapping (connects trace table streams to Lambda)
+  - S3 buckets (policies + trace overflow)
+  - SageMaker Notebook Instance (Jupyter environment)
+  
+  NOTE: Model access is handled via cross-region inference profiles (no manual enablement needed).
+
+# =============================================================================
+# PARAMETERS
+# =============================================================================
+Parameters:
+  # --- Workshop Studio provided parameters ---
+  BucketName:
+    Type: String
+    Description: Workshop Studio assets S3 bucket name.
+
+  BucketPrefix:
+    Type: String
+    Description: Workshop Studio assets prefix within the bucket.
+
+  AssumedRoleARNStr:
+    Type: String
+    Description: Participant's assumed IAM role ARN from Workshop Studio.
+
+  # --- Workshop-specific parameters ---
+  NeptuneGraphName:
+    Type: String
+    Default: dat408-compliance-graph
+    Description: Name of the Neptune Analytics graph.
+
+  NeptuneGraphMemory:
+    Type: Number
+    Default: 32
+    Description: Memory for Neptune Analytics graph (m-NCUs).
+    AllowedValues: [16, 32, 64, 128, 256]
+
+  LambdaMemorySize:
+    Type: Number
+    Default: 256
+    Description: Memory for the trace-to-graph Lambda (MB).
+    AllowedValues: [128, 256, 512]
+
+  LambdaTimeout:
+    Type: Number
+    Default: 60
+    Description: Timeout for the trace-to-graph Lambda (seconds).
+    MinValue: 10
+    MaxValue: 900
+
+  NotebookInstanceType:
+    Type: String
+    Default: ml.t3.xlarge
+    Description: SageMaker Notebook instance type.
+    AllowedValues: [ml.t3.medium, ml.t3.large, ml.t3.xlarge]
+
+  EmbeddingModelId:
+    Type: String
+    Default: amazon.titan-embed-text-v2:0
+    Description: >
+      Embedding model ID for the Knowledge Base. The full ARN is built with the
+      stack's own region (see LendingPolicyKB) so the workshop deploys in any
+      GraphRAG-supported region without a hardcoded region.
+
+  TracesTableName:
+    Type: String
+    Default: dat408-agent-traces
+    Description: >
+      Name for the agent traces DynamoDB table. Pre-created by the TracesTable
+      resource below so the stream event source mapping works from the start.
+
+  HistoricalDecisions:
+    Type: Number
+    Default: 3000000
+    MinValue: 0
+    Description: >
+      Number of historical decisions generated and loaded at deploy time (into the
+      traces table by DynamoDB import from S3, and into the graph by neptune.load).
+
+  TableDeletionProtection:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: >
+      Deletion protection on the decision-evidence table. Leave false for workshop
+      accounts (the stack must be deletable at teardown); a production evidence store
+      should enable it.
+
+# =============================================================================
+# RESOURCES
+# =============================================================================
+Resources:
+
+  # ---------------------------------------------------------------------------
+  # Neptune Analytics Graph
+  # ---------------------------------------------------------------------------
+  NeptuneAnalyticsGraph:
+    Type: AWS::NeptuneGraph::Graph
+    Properties:
+      GraphName: !Ref NeptuneGraphName
+      ProvisionedMemory: !Ref NeptuneGraphMemory
+      PublicConnectivity: true
+      ReplicaCount: 0
+      VectorSearchConfiguration:
+        VectorSearchDimension: 1024
+      DeletionProtection: false
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  # ---------------------------------------------------------------------------
+  # S3 Bucket - Trace Overflow Storage
+  # ---------------------------------------------------------------------------
+  TraceOverflowBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  # ---------------------------------------------------------------------------
+  # S3 Bucket - Lending Policy Documents (KB Data Source, private)
+  # ---------------------------------------------------------------------------
+  PolicyDocsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: DAT408
+        - Key: Purpose
+          Value: LendingPolicyKB
+
+  # ---------------------------------------------------------------------------
+  # S3 Bucket - Generated decision history (DynamoDB import + Neptune load source)
+  # ---------------------------------------------------------------------------
+  HistoryBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  # ---------------------------------------------------------------------------
+  # DynamoDB Table - Loan Applications
+  # ---------------------------------------------------------------------------
+  ApplicationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: dat408-applications
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: application_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: application_id
+          KeyType: HASH
+      Tags:
+        - Key: Project
+          Value: DAT408
+        - Key: Purpose
+          Value: LoanApplicationStore
+
+  # ---------------------------------------------------------------------------
+  # DynamoDB Table - Agent Traces (with Streams for Neptune pipeline)
+  # Attendees learn the schema design, but the table is pre-created so the
+  # event source mapping works from the start.
+  # ---------------------------------------------------------------------------
+  TracesTable:
+    Type: AWS::DynamoDB::Table
+    # Created by importing the generated decision history from S3, so the table
+    # starts with millions of past decisions without consuming write capacity
+    # (and without emitting stream records: only live evaluations reach the Lambda).
+    DependsOn: HistoryGenerate
+    Properties:
+      TableName: !Ref TracesTableName
+      BillingMode: PAY_PER_REQUEST
+      ImportSourceSpecification:
+        S3BucketSource:
+          S3Bucket: !Ref HistoryBucket
+          S3KeyPrefix: history/ddb/
+        InputFormat: DYNAMODB_JSON
+        InputCompressionType: GZIP
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: application_id
+          AttributeType: S
+        - AttributeName: step_timestamp
+          AttributeType: S
+        - AttributeName: credit_band
+          AttributeType: S
+        - AttributeName: dti_band
+          AttributeType: S
+        - AttributeName: ltv_band
+          AttributeType: S
+        - AttributeName: ungrounded_month
+          AttributeType: S
+        - AttributeName: prompt_version
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: application-index
+          KeySchema:
+            - AttributeName: application_id
+              KeyType: HASH
+            - AttributeName: step_timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        # "Applicants like Carlos": the three bands together as one multi-attribute key.
+        # Only decision items carry bands, so the index holds decisions only.
+        - IndexName: band-index
+          KeySchema:
+            - AttributeName: credit_band
+              KeyType: HASH
+            - AttributeName: dti_band
+              KeyType: HASH
+            - AttributeName: ltv_band
+              KeyType: HASH
+            - AttributeName: step_timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: INCLUDE
+            NonKeyAttributes: [outcome, compensating_factors, policies_violated]
+        # Sparse: only decisions that failed the runtime's citation check carry ungrounded_month.
+        - IndexName: ungrounded-index
+          KeySchema:
+            - AttributeName: ungrounded_month
+              KeyType: HASH
+            - AttributeName: step_timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: INCLUDE
+            NonKeyAttributes: [application_id, outcome, ungrounded_citations, citation_check]
+        # Sparse: only headers carry prompt_version, so this finds decisions made under one prompt.
+        - IndexName: prompt-index
+          KeySchema:
+            - AttributeName: prompt_version
+              KeyType: HASH
+            - AttributeName: step_timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      # TTL only deletes. Retention needs recovery: point-in-time recovery restores
+      # the table to any second of the last 35 days.
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      DeletionProtectionEnabled: !Ref TableDeletionProtection
+      Tags:
+        - Key: Project
+          Value: DAT408
+        - Key: Purpose
+          Value: AgentTraceCapture
+
+  # ---------------------------------------------------------------------------
+  # IAM Role - Bedrock Knowledge Base Execution Role
+  # ---------------------------------------------------------------------------
+  KnowledgeBaseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'dat408-kb-role-${AWS::Region}'
+      Description: Execution role for Bedrock Knowledge Base to access S3 policy docs.
+      # AmazonBedrockFullAccess for the same reason as AgentCoreExecutionRole:
+      # ingestion invokes the embedding and context-enrichment models, and that
+      # authorization also checks the aws-marketplace:ViewSubscriptions/Subscribe
+      # actions the inline BedrockEmbeddingAccess policy below does not grant.
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonBedrockFullAccess
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: S3PolicyAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt PolicyDocsBucket.Arn
+                  - !Sub '${PolicyDocsBucket.Arn}/*'
+        - PolicyName: BedrockEmbeddingAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:GetInferenceProfile
+                  - bedrock:ListInferenceProfiles
+                  - bedrock:GetFoundationModel
+                Resource: '*'
+        - PolicyName: NeptuneGraphAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - neptune-graph:GetGraph
+                  - neptune-graph:ReadDataViaQuery
+                  - neptune-graph:WriteDataViaQuery
+                  - neptune-graph:DeleteDataViaQuery
+                Resource:
+                  - !GetAtt NeptuneAnalyticsGraph.GraphArn
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  # ---------------------------------------------------------------------------
+  # Bedrock Knowledge Base - Lending Policies
+  # ---------------------------------------------------------------------------
+  LendingPolicyKB:
+    Type: AWS::Bedrock::KnowledgeBase
+    DependsOn: KnowledgeBaseRole
+    Properties:
+      Name: dat408-lending-policies
+      Description: >
+        Real, versioned policy sections (FHA Handbook 4000.1 and eCFR
+        Regulations B and Z) for the loan underwriting agent. Used for
+        RAG-based policy retrieval during application evaluation.
+      RoleArn: !GetAtt KnowledgeBaseRole.Arn
+      KnowledgeBaseConfiguration:
+        Type: VECTOR
+        VectorKnowledgeBaseConfiguration:
+          EmbeddingModelArn: !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/${EmbeddingModelId}'
+      StorageConfiguration:
+        Type: NEPTUNE_ANALYTICS
+        NeptuneAnalyticsConfiguration:
+          GraphArn: !GetAtt NeptuneAnalyticsGraph.GraphArn
+          FieldMapping:
+            TextField: text
+            MetadataField: metadata
+      Tags:
+        Project: DAT408
+
+  # ---------------------------------------------------------------------------
+  # KB ingestion logging — capture per-document APPLICATION_LOGS automatically
+  # in every (fresh) account so ingestion failures are visible in CloudWatch and
+  # readable from the notebook. The /aws/vendedlogs/ prefix lets CloudWatch Logs
+  # auto-authorize the delivery without a manual resource policy.
+  # ---------------------------------------------------------------------------
+  KBLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/vendedlogs/bedrock/dat408-kb-${AWS::StackName}'
+      RetentionInDays: 7
+
+  KBLogDeliverySource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      Name: !Sub 'dat408-kb-src-${AWS::StackName}'
+      LogType: APPLICATION_LOGS
+      ResourceArn: !GetAtt LendingPolicyKB.KnowledgeBaseArn
+
+  KBLogDeliveryDestination:
+    Type: AWS::Logs::DeliveryDestination
+    Properties:
+      Name: !Sub 'dat408-kb-dst-${AWS::StackName}'
+      DestinationResourceArn: !GetAtt KBLogGroup.Arn
+
+  KBLogDelivery:
+    Type: AWS::Logs::Delivery
+    Properties:
+      DeliverySourceName: !Ref KBLogDeliverySource
+      DeliveryDestinationArn: !GetAtt KBLogDeliveryDestination.Arn
+
+  # ---------------------------------------------------------------------------
+  # NOTE: The Bedrock DataSource (with ContextEnrichmentConfiguration for
+  # Neptune Analytics GraphRAG) is created via the notebook lifecycle / setup,
+  # not in CloudFormation.
+  # ---------------------------------------------------------------------------
+
+  # ---------------------------------------------------------------------------
+  # IAM Role - Lambda Execution Role
+  # ---------------------------------------------------------------------------
+  TraceToGraphLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'dat408-stream-processor-role-${AWS::Region}'
+      Description: Execution role for the trace-to-graph Lambda function.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: NeptuneGraphAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - neptune-graph:ReadDataViaQuery
+                  - neptune-graph:WriteDataViaQuery
+                  - neptune-graph:DeleteDataViaQuery
+                Resource: !GetAtt NeptuneAnalyticsGraph.GraphArn
+        - PolicyName: S3TraceOverflowAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub '${TraceOverflowBucket.Arn}/*'
+        - PolicyName: StreamFailureQueue
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource: !GetAtt StreamFailureQueue.Arn
+        - PolicyName: DynamoDBStreamsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetRecords
+                  - dynamodb:GetShardIterator
+                  - dynamodb:DescribeStream
+                  - dynamodb:ListStreams
+                Resource: !GetAtt TracesTable.StreamArn
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  # ---------------------------------------------------------------------------
+  # Lambda Function - Trace to Graph Processor (Skeleton)
+  # ---------------------------------------------------------------------------
+  TraceToGraphFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: dat408-stream-processor
+      Description: >
+        Processes DynamoDB Streams events from the agent traces table and writes
+        nodes/edges to Neptune Analytics. Attendees complete the transform logic
+        during the workshop.
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt TraceToGraphLambdaRole.Arn
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Environment:
+        Variables:
+          GRAPH_ID: !GetAtt NeptuneAnalyticsGraph.GraphId
+      Code:
+        ZipFile: |
+          """
+          DAT408 - Trace to Graph Processor (Skeleton)
+          Attendees replace this with the full transform logic during Module 2.
+          """
+          import json
+          import os
+          import boto3
+
+          GRAPH_ID = os.environ['GRAPH_ID']
+          neptune_client = boto3.client('neptune-graph')
+
+          def handler(event, context):
+              records = event.get('Records', [])
+              print(f"Received {len(records)} stream records (skeleton — no transform logic yet)")
+              return {'statusCode': 200, 'recordsProcessed': 0}
+      Tags:
+        - Key: Project
+          Value: DAT408
+        - Key: Purpose
+          Value: StreamProcessor
+
+  # ---------------------------------------------------------------------------
+  # Event Source Mapping - DynamoDB Streams → Lambda
+  # ---------------------------------------------------------------------------
+  StreamToLambdaMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt TracesTable.StreamArn
+      FunctionName: !GetAtt TraceToGraphFunction.Arn
+      StartingPosition: LATEST
+      BatchSize: 25
+      MaximumBatchingWindowInSeconds: 5
+      Enabled: true
+      # Only evaluation steps reach the transform: header (META) and per-policy
+      # aggregate (POLICY#) items share the table but are not graph data. REMOVE
+      # events (TTL expiry) are delivered so the graph forgets what the table forgets.
+      FilterCriteria:
+        Filters:
+          - Pattern: '{"eventName": ["INSERT", "REMOVE"], "dynamodb": {"Keys": {"SK": {"S": [{"prefix": "STEP#"}]}}}}'
+      # One bad record must never block its shard: split failing batches, retry a
+      # few times, report per-record failures, and park what still fails.
+      BisectBatchOnFunctionError: true
+      MaximumRetryAttempts: 3
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
+      DestinationConfig:
+        OnFailure:
+          Destination: !GetAtt StreamFailureQueue.Arn
+
+  StreamFailureQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: dat408-stream-failures
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  # ---------------------------------------------------------------------------
+  # IAM Role - SageMaker Notebook Execution Role (expanded for workshop)
+  # ---------------------------------------------------------------------------
+  NotebookExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'dat408-notebook-role-${AWS::Region}'
+      Description: Execution role for the DAT408 SageMaker Notebook instance.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonBedrockFullAccess
+        - arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess
+      Policies:
+        - PolicyName: DynamoDBFullAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:BatchGetItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:UpdateItem
+                  - dynamodb:DescribeTable
+                  - dynamodb:ListTables
+                  - dynamodb:DescribeStream
+                  - dynamodb:ListStreams
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/dat408-*'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/dat408-*/index/*'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/dat408-*/stream/*'
+              # How many items the deploy-time import wrote: DynamoDB's own ItemCount is only
+              # refreshed about every six hours, so a fresh table reports 0.
+              - Effect: Allow
+                Action: dynamodb:ListImports
+                Resource: '*'
+              - Effect: Allow
+                Action: dynamodb:DescribeImport
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/dat408-*/import/*'
+        - PolicyName: NeptuneAnalyticsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - neptune-graph:ReadDataViaQuery
+                  - neptune-graph:WriteDataViaQuery
+                  - neptune-graph:DeleteDataViaQuery
+                  - neptune-graph:GetGraph
+                  - neptune-graph:ListGraphs
+                  - neptune-graph:GetGraphSummary
+                Resource:
+                  - !GetAtt NeptuneAnalyticsGraph.GraphArn
+              - Effect: Allow
+                Action:
+                  - neptune-graph:ListGraphs
+                Resource: '*'
+        # Read-only, and only what the notebooks read: the notebooks the lifecycle copies at
+        # every start, the graph-notebook bundle, each step's full output, and the history's
+        # fixtures. Nothing in the notebooks writes to S3.
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${BucketName}'
+                Condition:
+                  StringLike:
+                    s3:prefix: !Sub '${BucketPrefix}notebooks/*'
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${BucketName}/${BucketPrefix}notebooks/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::aws-neptune-notebook-${AWS::Region}/graph_notebook.tar.gz'
+                  - !Sub 'arn:${AWS::Partition}:s3:::aws-neptune-notebook/graph_notebook.tar.gz'
+                  - !Sub '${TraceOverflowBucket.Arn}/evidence/*'
+                  - !Sub '${HistoryBucket.Arn}/*'
+        - PolicyName: CloudWatchLogsRead
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Read the KB ingestion logs from the notebook (so the per-document
+              # failure reason is visible without console/admin access).
+              - Effect: Allow
+                Action:
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                  - logs:GetLogEvents
+                  - logs:FilterLogEvents
+                Resource: '*'
+        - PolicyName: AgentCoreInvokeAndObservability
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Invoke this stack's runtimes from the notebook: the underwriting agent, and the
+              # MCP server the Kiro notebook deploys.
+              - Effect: Allow
+                Action:
+                  - bedrock-agentcore:InvokeAgentRuntime
+                  - bedrock-agentcore:GetAgentRuntime
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:runtime/dat408*'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:runtime/dat408*/runtime-endpoint/*'
+              - Effect: Allow
+                Action: bedrock-agentcore:ListAgentRuntimes
+                Resource: '*'
+              # Read AgentCore Observability telemetry inline (Module 1): X-Ray
+              # traces/spans + the AWS/Bedrock-AgentCore CloudWatch metrics.
+              - Effect: Allow
+                Action:
+                  - xray:GetTraceSummaries
+                  - xray:BatchGetTraces
+                  - xray:GetTraceGraph
+                  - xray:GetServiceGraph
+                  - cloudwatch:GetMetricData
+                  - cloudwatch:GetMetricStatistics
+                  - cloudwatch:ListMetrics
+                Resource: '*'
+        - PolicyName: BedrockAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource:
+                  - !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/*'
+                  - 'arn:aws:bedrock:*::foundation-model/*'
+                  - 'arn:aws:bedrock:*::inference-profile/*'
+                  - !Sub 'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*'
+              - Effect: Allow
+                Action:
+                  - bedrock:Retrieve
+                  - bedrock:RetrieveAndGenerate
+                Resource:
+                  - !Sub 'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/*'
+              - Effect: Allow
+                Action:
+                  # Read-only: the policies are ingested at deploy time (IngestPolicies).
+                  - bedrock:GetKnowledgeBase
+                  - bedrock:ListKnowledgeBases
+                  - bedrock:ListInferenceProfiles
+                  - bedrock:GetInferenceProfile
+                  - bedrock:ListDataSources
+                  - bedrock:GetDataSource
+                  - bedrock:GetIngestionJob
+                  - bedrock:ListIngestionJobs
+                Resource: '*'
+        - PolicyName: LambdaManagement
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:UpdateFunctionCode
+                  - lambda:GetFunctionConfiguration
+                  - lambda:GetFunction
+                  - lambda:ListEventSourceMappings
+                Resource:
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:dat408-*'
+              - Effect: Allow
+                Action:
+                  - lambda:ListEventSourceMappings
+                Resource: '*'
+              # Deploy the MCP server from the attendee's answers (Kiro notebook), and replay
+              # stream records through the transform (Go deeper, G.5).
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource:
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:dat408-pkgbuilder-${AWS::StackName}'
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:dat408-stream-processor'
+        - PolicyName: CloudFormationRead
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:DescribeStacks
+                  - cloudformation:ListStacks
+                Resource: '*'
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  # ---------------------------------------------------------------------------
+  # SageMaker Notebook Lifecycle Configuration
+  # ---------------------------------------------------------------------------
+  NotebookLifecycleConfigV2:
+    Type: AWS::SageMaker::NotebookInstanceLifecycleConfig
+    Properties:
+      NotebookInstanceLifecycleConfigName: !Sub 'dat408-lc-v2-${AWS::AccountId}'
+      OnStart:
+        - Content:
+            Fn::Base64:
+              Fn::Join:
+                - ''
+                - - "#!/bin/bash\n"
+                  - "sudo -u ec2-user -i << 'EOF'\n"
+                  - "source /home/ec2-user/anaconda3/bin/activate python3\n"
+                  - "pip install --upgrade boto3\n"
+                  - "cd /home/ec2-user/SageMaker\n"
+                  - "mkdir -p dat408\n"
+                  - "# Tell the notebooks which region and stack they're in. Kernels don't read\n"
+                  - "# ~/.bashrc, so setup() reads this file instead.\n"
+                  - "printf 'AWS_REGION="
+                  - !Ref AWS::Region
+                  - "\\nWORKSHOP_STACK_NAME="
+                  - !Ref AWS::StackName
+                  - "\\n' > dat408/workshop_config.txt\n"
+                  - "# Replace the module notebooks with the current set (the copy below overwrites\n"
+                  - "# same-named ones anyway); removing first drops notebooks that no longer ship.\n"
+                  - "# solution/ and every other file in dat408/ is left alone.\n"
+                  - "rm -f dat408/Module*.ipynb dat408/DAT408.ipynb 'dat408/Go deeper.ipynb' dat408/Kiro.ipynb\n"
+                  - "aws s3 cp s3://"
+                  - !Ref BucketName
+                  - "/"
+                  - !Ref BucketPrefix
+                  - "notebooks/ dat408/ --recursive\n"
+                  - "pip install -r dat408/requirements.txt 2>/dev/null || true\n"
+                  - "# Build matplotlib's font cache now, not on an attendee's first chart.\n"
+                  - "python -c 'import matplotlib.pyplot' 2>/dev/null || true\n"
+                  - "mkdir -p /home/ec2-user/.local/lib/python3.10/site-packages\n"
+                  - "echo '/home/ec2-user/SageMaker/dat408' > /home/ec2-user/anaconda3/envs/python3/lib/python3.10/site-packages/dat408.pth\n"
+                  - "EOF\n"
+                  - "# Amazon Neptune graph-notebook: %%oc cell magic + native interactive graph\n"
+                  - "# visualization. Install the official AWS bundle (install_jl4x.sh) and write\n"
+                  - "# the GRAPH_NOTEBOOK_* connection env vars for this Neptune Analytics graph.\n"
+                  - "# Mirrors the managed Neptune Analytics notebook setup (service=neptune-graph).\n"
+                  - "sudo -u ec2-user -i bash <<'EOG' || echo 'graph-notebook setup error (see lifecycle log)'\n"
+                  - "  { echo 'export GRAPH_NOTEBOOK_SSL=True';"
+                  - " echo 'export GRAPH_NOTEBOOK_AUTH_MODE=IAM';"
+                  - " echo 'export GRAPH_NOTEBOOK_SERVICE=neptune-graph';"
+                  - " echo 'export GRAPH_NOTEBOOK_HOST="
+                  - !GetAtt NeptuneAnalyticsGraph.Endpoint
+                  - "';"
+                  - " echo 'export GRAPH_NOTEBOOK_PORT=8182';"
+                  - " echo 'export AWS_REGION="
+                  - !Ref AWS::Region
+                  - "'; } >> ~/.bashrc\n"
+                  - "  aws s3 cp s3://aws-neptune-notebook-"
+                  - !Ref AWS::Region
+                  - "/graph_notebook.tar.gz /tmp/graph_notebook.tar.gz || aws s3 cp s3://aws-neptune-notebook/graph_notebook.tar.gz /tmp/graph_notebook.tar.gz\n"
+                  - "  rm -rf /tmp/graph_notebook && tar -zxvf /tmp/graph_notebook.tar.gz -C /tmp\n"
+                  - "  chmod +x /tmp/graph_notebook/install_jl4x.sh && /tmp/graph_notebook/install_jl4x.sh\n"
+                  - "EOG\n"
+
+  # ---------------------------------------------------------------------------
+  # SageMaker Notebook Instance
+  # ---------------------------------------------------------------------------
+  NotebookInstance:
+    Type: AWS::SageMaker::NotebookInstance
+    Properties:
+      # Name MUST start with "aws-neptune-notebook-" and carry the Neptune graph
+      # tag below: together with the graph_notebook bundle installed in the
+      # lifecycle, these light up the %%oc magic (auto Graph + Table tabs) and
+      # the built-in Graph Explorer for this Neptune Analytics graph.
+      NotebookInstanceName: !Sub 'aws-neptune-notebook-dat408-${AWS::Region}'
+      # AL2023 / JupyterLab 4 platform — required by the graph_notebook bundle's
+      # install_jl4x.sh (see the lifecycle OnStart above).
+      PlatformIdentifier: notebook-al2023-v1
+      InstanceType: !Ref NotebookInstanceType
+      RoleArn: !GetAtt NotebookExecutionRole.Arn
+      LifecycleConfigName: !GetAtt NotebookLifecycleConfigV2.NotebookInstanceLifecycleConfigName
+      DirectInternetAccess: Enabled
+      # Instance metadata only over IMDSv2 (session tokens).
+      InstanceMetadataServiceConfiguration:
+        MinimumInstanceMetadataServiceVersion: '2'
+      Tags:
+        - Key: Project
+          Value: DAT408
+        - Key: aws-neptune-graph-id
+          Value: !GetAtt NeptuneAnalyticsGraph.GraphId
+
+  # ---------------------------------------------------------------------------
+  # AgentCore Runtime — hosts the underwriting agent (Module 1)
+  # ---------------------------------------------------------------------------
+  # The agent runs in Amazon Bedrock AgentCore Runtime, NOT in the notebook.
+  # AgentCore provides operational observability (latency / spans / errors in
+  # X-Ray + CloudWatch under the `AWS/Bedrock-AgentCore` namespace) with no
+  # instrumentation code. The agent also writes decision evidence to DynamoDB
+  # from inside the runtime, which flows through Streams -> Lambda -> Neptune.
+  # NETWORK MODE is PUBLIC: the agent reaches only public AWS APIs (Bedrock,
+  # DynamoDB, Neptune Analytics, KB), so no customer VPC is required.
+
+  # S3 bucket holding the built agent deployment zip. The bedrock-agentcore
+  # SERVICE (not the caller) reads the zip during CreateAgentRuntime, so it needs
+  # the resource-based bucket policy below.
+  AgentArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  AgentArtifactBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AgentArtifactBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowAgentCoreReadAgentZip
+            Effect: Allow
+            Principal:
+              Service: bedrock-agentcore.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${AgentArtifactBucket.Arn}/dat408/agents/*'
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+
+  # Execution role assumed by the AgentCore Runtime (the agent's own identity).
+  AgentCoreExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'dat408-agentcore-role-${AWS::Region}'
+      Description: Execution role for the DAT408 underwriting agent on AgentCore Runtime.
+      # AmazonBedrockFullAccess mirrors the (proven-working) NotebookExecutionRole:
+      # it grants bedrock:* PLUS the aws-marketplace:ViewSubscriptions/Subscribe
+      # actions that Bedrock InvokeModel authorization checks. Without it the
+      # runtime role gets AccessDeniedException invoking the model even though the
+      # model is reachable via cross-region inference from the notebook role.
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonBedrockFullAccess
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock-agentcore.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:*'
+      Policies:
+        - PolicyName: BedrockInvoke
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                  - bedrock:GetInferenceProfile
+                  - bedrock:ListInferenceProfiles
+                  - bedrock:GetFoundationModel
+                Resource: '*'
+        - PolicyName: KnowledgeBaseRetrieve
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:Retrieve
+                Resource: !GetAtt LendingPolicyKB.KnowledgeBaseArn
+        - PolicyName: DecisionEvidenceCapture
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Write each ReAct step to the traces table (server-side capture)
+              # and read the application under evaluation.
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:ConditionCheckItem
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                Resource:
+                  - !GetAtt TracesTable.Arn
+                  - !Sub '${TracesTable.Arn}/index/*'
+                  - !GetAtt ApplicationsTable.Arn
+        - PolicyName: EvidencePayloads
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub '${TraceOverflowBucket.Arn}/evidence/*'
+        - PolicyName: AgentCoreRuntimeLogging
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DescribeLogStreams
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/*'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/*:log-stream:*'
+              - Effect: Allow
+                Action: logs:DescribeLogGroups
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*'
+        - PolicyName: AgentCoreObservability
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                  - xray:GetSamplingRules
+                  - xray:GetSamplingTargets
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: bedrock-agentcore
+        - PolicyName: AgentCoreWorkloadIdentity
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # The runtime requests a workload access token on every invocation;
+              # without this it reaches READY but fails at invoke time.
+              - Effect: Allow
+                Action:
+                  - bedrock-agentcore:GetWorkloadAccessToken
+                  - bedrock-agentcore:GetWorkloadAccessTokenForJWT
+                  - bedrock-agentcore:GetWorkloadAccessTokenForUserId
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default/workload-identity/dat408UnderwritingAgent-*'
+        - PolicyName: AgentCodeS3Read
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub '${AgentArtifactBucket.Arn}/dat408/agents/*'
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  # Execution role for the MCP server runtime (dat408EvidenceMCP), which the
+  # Kiro notebook deploys from the attendee's answers. Read-only
+  # on the evidence: it may read the traces table and the graph, and invoke the
+  # underwriting agent (whose runtime writes the evidence); it cannot write evidence.
+  McpExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'dat408-mcp-role-${AWS::Region}'
+      Description: Execution role for the DAT408 decision-evidence MCP server on AgentCore Runtime.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock-agentcore.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:*'
+      Policies:
+        - PolicyName: ReadDecisionEvidence
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:GetItem
+                Resource:
+                  - !GetAtt TracesTable.Arn
+                  - !Sub '${TracesTable.Arn}/index/*'
+              - Effect: Allow
+                Action: neptune-graph:ReadDataViaQuery
+                Resource: !GetAtt NeptuneAnalyticsGraph.GraphArn
+        - PolicyName: InvokeUnderwritingAgent
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: bedrock-agentcore:InvokeAgentRuntime
+                Resource: !Sub 'arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:runtime/dat408UnderwritingAgent-*'
+        - PolicyName: AgentCoreRuntimeBasics
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DescribeLogStreams
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/*'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/*:log-stream:*'
+              - Effect: Allow
+                Action: logs:DescribeLogGroups
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*'
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                  - xray:GetSamplingRules
+                  - xray:GetSamplingTargets
+                Resource: '*'
+              - Effect: Allow
+                Action: cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: bedrock-agentcore
+              - Effect: Allow
+                Action:
+                  - bedrock-agentcore:GetWorkloadAccessToken
+                  - bedrock-agentcore:GetWorkloadAccessTokenForJWT
+                  - bedrock-agentcore:GetWorkloadAccessTokenForUserId
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default/workload-identity/dat408EvidenceMCP-*'
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub '${AgentArtifactBucket.Arn}/dat408/agents/*'
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  # Role for the packaging Lambda (builds the zip + calls CreateAgentRuntime).
+  AgentPackageBuilderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'dat408-pkgbuilder-role-${AWS::Region}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ReadAssetsBucket
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub 'arn:aws:s3:::${BucketName}'
+                  - !Sub 'arn:aws:s3:::${BucketName}/${BucketPrefix}*'
+        - PolicyName: WriteAgentZip
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource: !Sub '${AgentArtifactBucket.Arn}/dat408/agents/*'
+        - PolicyName: AgentCoreDeploy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Only the control-plane calls lambda_build_agent_package.py makes.
+              # CreateAgentRuntime and ListAgentRuntimes take no resource ARN, so
+              # they are pinned to this Region instead.
+              - Effect: Allow
+                Action:
+                  - bedrock-agentcore:CreateAgentRuntime
+                  - bedrock-agentcore:ListAgentRuntimes
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: !Ref AWS::Region
+              # Get/Update/Delete the two dat408 runtimes.
+              - Effect: Allow
+                Action:
+                  - bedrock-agentcore:GetAgentRuntime
+                  - bedrock-agentcore:UpdateAgentRuntime
+                  - bedrock-agentcore:DeleteAgentRuntime
+                  - bedrock-agentcore:DeleteAgentRuntimeEndpoint
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:runtime/dat408*'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:runtime/dat408*/runtime-endpoint/*'
+              # CreateAgentRuntime creates the default endpoint and the workload
+              # identity before the runtime ID exists, so AgentCore authorizes them
+              # against runtime/* and workload-identity/*. Kept to this Region and
+              # account.
+              - Effect: Allow
+                Action:
+                  - bedrock-agentcore:CreateAgentRuntimeEndpoint
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:runtime/*'
+              - Effect: Allow
+                Action:
+                  - bedrock-agentcore:CreateWorkloadIdentity
+                  - bedrock-agentcore:GetWorkloadIdentity
+                  - bedrock-agentcore:DeleteWorkloadIdentity
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default/workload-identity/*'
+              # Allow creating any bedrock-agentcore service-linked role the
+              # first CreateAgentRuntime in a fresh account may need. Mirrors the
+              # DAT433 set (network + gateway-network + runtime-identity +
+              # runtime-instances) so a PUBLIC-mode create cannot AccessDeny on an
+              # SLR we failed to anticipate.
+              - Effect: Allow
+                Action: iam:CreateServiceLinkedRole
+                Resource:
+                  - arn:aws:iam::*:role/aws-service-role/network.bedrock-agentcore.amazonaws.com/AWSServiceRoleForBedrockAgentCoreNetwork
+                  - arn:aws:iam::*:role/aws-service-role/bedrock-agentcore.amazonaws.com/AWSServiceRoleForBedrockAgentCoreGatewayNetwork
+                  - arn:aws:iam::*:role/aws-service-role/runtime-identity.bedrock-agentcore.amazonaws.com/AWSServiceRoleForBedrockAgentCoreRuntimeIdentity
+                  - arn:aws:iam::*:role/aws-service-role/runtime-instances.bedrock-agentcore.amazonaws.com/AWSServiceRoleForBedrockAgentCoreRuntimeInstances
+                Condition:
+                  StringEquals:
+                    iam:AWSServiceName:
+                      - network.bedrock-agentcore.amazonaws.com
+                      - bedrock-agentcore.amazonaws.com
+                      - runtime-identity.bedrock-agentcore.amazonaws.com
+                      - runtime-instances.bedrock-agentcore.amazonaws.com
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource:
+                  - !GetAtt AgentCoreExecutionRole.Arn
+                  - !GetAtt McpExecutionRole.Arn
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  AgentPackageBuilderFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'dat408-pkgbuilder-${AWS::StackName}'
+      Description: Builds the underwriting-agent and MCP server packages and creates their AgentCore Runtimes.
+      Runtime: python3.12
+      Architectures: [x86_64]
+      Handler: lambda_build_agent_package.handler
+      Timeout: 900
+      MemorySize: 512
+      # The handler stages arm64 boto3 + bedrock-agentcore (unzipped) plus the
+      # output zip in /tmp; bump ephemeral storage above the 512MB default as
+      # cheap insurance against a growing dependency closure.
+      EphemeralStorage:
+        Size: 2048
+      Role: !GetAtt AgentPackageBuilderRole.Arn
+      Code:
+        S3Bucket: !Ref BucketName
+        S3Key: !Sub '${BucketPrefix}code/lambda_build_agent_package_deployment.zip'
+      # Settings for the MCP server deploy the notebook requests (Module 3). The
+      # notebook sends only the answers and a few non-secret environment values;
+      # the role and buckets are fixed here.
+      Environment:
+        Variables:
+          ASSETS_BUCKET: !Ref BucketName
+          ASSETS_PREFIX: !Ref BucketPrefix
+          DATA_BUCKET: !Ref AgentArtifactBucket
+          MCP_ROLE_ARN: !GetAtt McpExecutionRole.Arn
+          MCP_RUNTIME_NAME: dat408EvidenceMCP
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  AgentPackageBuild:
+    Type: AWS::CloudFormation::CustomResource
+    DependsOn:
+      - AgentArtifactBucketPolicy
+      - TracesTable
+      - ApplicationsTable
+      - LendingPolicyKB
+      - PolicyIngest
+    Properties:
+      ServiceToken: !GetAtt AgentPackageBuilderFunction.Arn
+      AssetsBucketName: !Ref BucketName
+      AssetsBucketPrefix: !Ref BucketPrefix
+      DataBucket: !Ref AgentArtifactBucket
+      DeployKey: dat408/agents/underwriting-agent/agent_package.zip
+      EntryPoint: runtime_app.py
+      AgentRuntimeName: dat408UnderwritingAgent
+      RoleArn: !GetAtt AgentCoreExecutionRole.Arn
+      EnvironmentVariables:
+        KB_ID: !Ref LendingPolicyKB
+        TRACES_TABLE: !Ref TracesTableName
+        APPLICATIONS_TABLE: dat408-applications
+        BEDROCK_MODEL_ID: us.anthropic.claude-sonnet-5
+        DAT408_REGION: !Ref AWS::Region
+        EVIDENCE_BUCKET: !Ref TraceOverflowBucket
+        KB_INGESTION_JOB_ID: !GetAtt PolicyIngest.IngestionJobId
+
+  # ---------------------------------------------------------------------------
+  # Deploy-time data loading. Everything that takes minutes happens here, before
+  # attendees arrive: generate the decision history, import it into DynamoDB (the
+  # TracesTable above), bulk-load its graph projection into Neptune Analytics,
+  # ingest the policy corpus into the Knowledge Base, and seed the sample
+  # applications. Every step is safe to retry.
+  # ---------------------------------------------------------------------------
+  DeployDataRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'dat408-deploydata-role-${AWS::Region}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DeployData
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [s3:GetObject, s3:ListBucket]
+                Resource:
+                  - !Sub 'arn:aws:s3:::${BucketName}'
+                  - !Sub 'arn:aws:s3:::${BucketName}/${BucketPrefix}*'
+              - Effect: Allow
+                Action: [s3:GetObject, s3:PutObject, s3:DeleteObject, s3:ListBucket]
+                Resource:
+                  - !GetAtt HistoryBucket.Arn
+                  - !Sub '${HistoryBucket.Arn}/*'
+                  - !GetAtt PolicyDocsBucket.Arn
+                  - !Sub '${PolicyDocsBucket.Arn}/*'
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource:
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:dat408-history-generator-${AWS::StackName}'
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:dat408-lineage-generator-${AWS::StackName}'
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:dat408-deploy-data-${AWS::StackName}'
+              - Effect: Allow
+                Action:
+                  - neptune-graph:ReadDataViaQuery
+                  - neptune-graph:WriteDataViaQuery
+                  - neptune-graph:DeleteDataViaQuery
+                  - neptune-graph:GetGraph
+                Resource: !GetAtt NeptuneAnalyticsGraph.GraphArn
+              - Effect: Allow
+                Action:
+                  - bedrock:ListInferenceProfiles
+                  - bedrock:GetInferenceProfile
+                Resource: '*'
+              # The data source and its ingestion jobs belong to this stack's Knowledge Base.
+              - Effect: Allow
+                Action:
+                  - bedrock:CreateDataSource
+                  - bedrock:UpdateDataSource
+                  - bedrock:DeleteDataSource
+                  - bedrock:ListDataSources
+                  - bedrock:GetDataSource
+                  - bedrock:StartIngestionJob
+                  - bedrock:GetIngestionJob
+                  # Delete: stop a running ingestion before deleting the data source.
+                  - bedrock:ListIngestionJobs
+                  - bedrock:StopIngestionJob
+                Resource: !GetAtt LendingPolicyKB.KnowledgeBaseArn
+              - Effect: Allow
+                Action: dynamodb:PutItem
+                Resource: !GetAtt ApplicationsTable.Arn
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  HistoryGeneratorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'dat408-historygen-role-${AWS::Region}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: WriteHistory
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [s3:PutObject, s3:GetObject]
+                Resource: !Sub '${HistoryBucket.Arn}/history/*'
+              # The lineage step lists the shards' lineage input.
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt HistoryBucket.Arn
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  # History v3's lineage: one invocation over every decision in the lineage window.
+  LineageGeneratorFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'dat408-lineage-generator-${AWS::StackName}'
+      Description: Generates history v3, the lineage layer for page 3.
+      Runtime: python3.12
+      Handler: lineage_generator.handler
+      Timeout: 900
+      MemorySize: 6144
+      Role: !GetAtt HistoryGeneratorRole.Arn
+      Code:
+        S3Bucket: !Ref BucketName
+        S3Key: !Sub '${BucketPrefix}code/lambda_deploy_data_deployment.zip'
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  HistoryGeneratorFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'dat408-history-generator-${AWS::StackName}'
+      Description: Generates one shard of the deterministic decision history.
+      Runtime: python3.12
+      Handler: history_generator.handler
+      Timeout: 900
+      MemorySize: 3008
+      Role: !GetAtt HistoryGeneratorRole.Arn
+      Code:
+        S3Bucket: !Ref BucketName
+        S3Key: !Sub '${BucketPrefix}code/lambda_deploy_data_deployment.zip'
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  DeployDataFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'dat408-deploy-data-${AWS::StackName}'
+      Description: Deploy-time data loading (history, graph, policies, sample applications).
+      Runtime: python3.12
+      Handler: lambda_deploy_data.handler
+      Timeout: 900
+      MemorySize: 1024
+      Role: !GetAtt DeployDataRole.Arn
+      Code:
+        S3Bucket: !Ref BucketName
+        S3Key: !Sub '${BucketPrefix}code/lambda_deploy_data_deployment.zip'
+      Tags:
+        - Key: Project
+          Value: DAT408
+
+  HistoryGenerate:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt DeployDataFunction.Arn
+      Action: GenerateHistory
+      Bucket: !Ref HistoryBucket
+      Prefix: history
+      Total: !Ref HistoricalDecisions
+      Shards: 60
+      GeneratorFunction: !Ref HistoryGeneratorFunction
+
+  LineageGenerate:
+    Type: AWS::CloudFormation::CustomResource
+    DependsOn: HistoryGenerate
+    Properties:
+      ServiceToken: !GetAtt DeployDataFunction.Arn
+      Action: GenerateLineage
+      Bucket: !Ref HistoryBucket
+      Prefix: history
+      Total: !Ref HistoricalDecisions
+      GeneratorFunction: !Ref LineageGeneratorFunction
+
+  GraphLoad:
+    Type: AWS::CloudFormation::CustomResource
+    DependsOn: [HistoryGenerate, LineageGenerate]
+    Properties:
+      ServiceToken: !GetAtt DeployDataFunction.Arn
+      Action: LoadGraph
+      Bucket: !Ref HistoryBucket
+      Prefix: history
+      GraphId: !GetAtt NeptuneAnalyticsGraph.GraphId
+      Total: !Ref HistoricalDecisions
+
+  PolicyIngest:
+    Type: AWS::CloudFormation::CustomResource
+    # After the history load: ingestion writes passages into the same graph, and running both
+    # at once slowed ingestion past the Lambda time limit and failed documents with internal errors.
+    DependsOn: GraphLoad
+    Properties:
+      ServiceToken: !GetAtt DeployDataFunction.Arn
+      Action: IngestPolicies
+      KnowledgeBaseId: !Ref LendingPolicyKB
+      AssetsBucket: !Ref BucketName
+      AssetsPrefix: !Ref BucketPrefix
+      PolicyBucket: !Ref PolicyDocsBucket
+
+  SeedApplications:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt DeployDataFunction.Arn
+      Action: SeedApplications
+      TableName: !Ref ApplicationsTable
+
+# =============================================================================
+# OUTPUTS
+# =============================================================================
+Outputs:
+  HistoricalDecisions:
+    Description: Historical decisions loaded at deploy time (DynamoDB and Neptune).
+    Value: !GetAtt HistoryGenerate.Decisions
+
+  NeptuneGraphId:
+    Description: Neptune Analytics Graph identifier.
+    Value: !GetAtt NeptuneAnalyticsGraph.GraphId
+    Export:
+      Name: !Sub '${AWS::StackName}-NeptuneGraphId'
+
+  NeptuneGraphEndpoint:
+    Description: Neptune Analytics Graph endpoint.
+    Value: !GetAtt NeptuneAnalyticsGraph.Endpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-NeptuneGraphEndpoint'
+
+  KnowledgeBaseId:
+    Description: Bedrock Knowledge Base ID for lending policy retrieval.
+    Value: !Ref LendingPolicyKB
+    Export:
+      Name: !Sub '${AWS::StackName}-KnowledgeBaseId'
+
+  ApplicationsTableName:
+    Description: DynamoDB table name for loan applications.
+    Value: !Ref ApplicationsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-ApplicationsTableName'
+
+  TracesTableName:
+    Description: DynamoDB table name for agent traces.
+    Value: !Ref TracesTable
+    Export:
+      Name: !Sub '${AWS::StackName}-TracesTableName'
+
+  StreamProcessorFunction:
+    Description: Lambda function name for the stream processor.
+    Value: !Ref TraceToGraphFunction
+    Export:
+      Name: !Sub '${AWS::StackName}-StreamProcessorFunction'
+
+  AgentRuntimeArn:
+    Description: ARN of the underwriting agent's Bedrock AgentCore Runtime.
+    Value: !GetAtt AgentPackageBuild.AgentRuntimeArn
+    Export:
+      Name: !Sub '${AWS::StackName}-AgentRuntimeArn'
+
+  McpDeployFunction:
+    Description: Lambda the Module 3 notebook invokes to deploy the MCP server
+    Value: !Ref AgentPackageBuilderFunction
+
+  PolicyBucketName:
+    Description: S3 bucket for lending policy documents.
+    Value: !Ref PolicyDocsBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-PolicyBucketName'
+
+  HistoryBucketName:
+    Description: S3 bucket for the generated historical decisions.
+    Value: !Ref HistoryBucket
+
+  S3BucketName:
+    Description: S3 bucket for trace overflow storage.
+    Value: !Ref TraceOverflowBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-S3BucketName'
+
+  NotebookInstanceUrl:
+    Description: URL to access the SageMaker Notebook instance.
+    Value: !Sub 'https://${AWS::Region}.console.aws.amazon.com/sagemaker/home?region=${AWS::Region}#/notebook-instances/aws-neptune-notebook-dat408-${AWS::Region}'
+    Export:
+      Name: !Sub '${AWS::StackName}-NotebookInstanceUrl'

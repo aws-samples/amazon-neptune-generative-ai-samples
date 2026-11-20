@@ -1,0 +1,257 @@
+{
+  "built": "2026-10-28",
+  "policies": {
+    "HUD-4000.1-II.A.1.a-applications-and-disclosures.md": {
+      "policy_id": "HUD 4000.1 II.A.1.a",
+      "title": "Applications and Disclosures",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2026-11-10",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.1.b-general-mortgage-insurance-eligibility.md": {
+      "policy_id": "HUD 4000.1 II.A.1.b",
+      "title": "General Mortgage Insurance Eligibility",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2026-11-10",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.2.a-maximum-mortgage-amounts.md": {
+      "policy_id": "HUD 4000.1 II.A.2.a",
+      "title": "Maximum Mortgage Amounts",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2026-01-01",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.2.b-loan-to-value-limits.md": {
+      "policy_id": "HUD 4000.1 II.A.2.b",
+      "title": "Loan-to-Value Limits",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2021-02-16",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.2.c-required-investment.md": {
+      "policy_id": "HUD 4000.1 II.A.2.c",
+      "title": "Required Investment",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2015-09-14",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.2.d-maximum-mortgage-term.md": {
+      "policy_id": "HUD 4000.1 II.A.2.d",
+      "title": "Maximum Mortgage Term",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2015-09-14",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.2.e-mortgage-insurance-premiums.md": {
+      "policy_id": "HUD 4000.1 II.A.2.e",
+      "title": "Mortgage Insurance Premiums",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2015-09-14",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.3.a-property-acceptability-criteria.md": {
+      "policy_id": "HUD 4000.1 II.A.3.a",
+      "title": "Property Acceptability Criteria",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2026-11-10",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.3.b-required-documentation-for-underwriting-the-property.md": {
+      "policy_id": "HUD 4000.1 II.A.3.b",
+      "title": "Required Documentation for Underwriting the Property",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2024-08-19",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.3.c-form-hud-92800-5b-conditional-commitment-direct-endorsement-statement-of.md": {
+      "policy_id": "HUD 4000.1 II.A.3.c",
+      "title": "Form HUD-92800.5B, Conditional Commitment Direct Endorsement Statement of",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.4.a-underwriting-with-an-automated-underwriting-system.md": {
+      "policy_id": "HUD 4000.1 II.A.4.a",
+      "title": "Underwriting with an Automated Underwriting System",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2026-11-10",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.4.b-credit-requirements-total.md": {
+      "policy_id": "HUD 4000.1 II.A.4.b",
+      "title": "Credit Requirements (TOTAL)",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2025-04-10",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.4.c-income-requirements-total.md": {
+      "policy_id": "HUD 4000.1 II.A.4.c",
+      "title": "Income Requirements (TOTAL)",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2026-11-10",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.4.d-asset-requirements-total.md": {
+      "policy_id": "HUD 4000.1 II.A.4.d",
+      "title": "Asset Requirements (TOTAL)",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2026-11-10",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.4.e-final-underwriting-decision-total.md": {
+      "policy_id": "HUD 4000.1 II.A.4.e",
+      "title": "Final Underwriting Decision (TOTAL)",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2026-11-10",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.5.a-credit-requirements-manual.md": {
+      "policy_id": "HUD 4000.1 II.A.5.a",
+      "title": "Credit Requirements (Manual)",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2026-11-10",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.5.b-income-requirements-manual.md": {
+      "policy_id": "HUD 4000.1 II.A.5.b",
+      "title": "Income Requirements (Manual)",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2026-11-10",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.5.c-asset-requirements-manual.md": {
+      "policy_id": "HUD 4000.1 II.A.5.c",
+      "title": "Asset Requirements (Manual)",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2026-11-10",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "HUD-4000.1-II.A.5.d-final-underwriting-decision-manual.md": {
+      "policy_id": "HUD 4000.1 II.A.5.d",
+      "title": "Final Underwriting Decision (Manual)",
+      "source": "FHA Single Family Housing Policy Handbook 4000.1 (U.S. Department of Housing and Urban Development)",
+      "version": "Update 18, issued 2026-08-12; section effective 2026-11-10",
+      "source_url": "https://www.hud.gov/sites/default/files/Housing/documents/40001-hsgh-Update-18.pdf"
+    },
+    "12-CFR-1002.1-regulation-b-equal-credit-opportunity-act-authority-scope-and-purpose.md": {
+      "policy_id": "12 CFR 1002.1",
+      "title": "Regulation B (Equal Credit Opportunity Act): Authority, scope and purpose",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.1"
+    },
+    "12-CFR-1002.2-regulation-b-equal-credit-opportunity-act-definitions.md": {
+      "policy_id": "12 CFR 1002.2",
+      "title": "Regulation B (Equal Credit Opportunity Act): Definitions",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.2"
+    },
+    "12-CFR-1002.3-regulation-b-equal-credit-opportunity-act-limited-exceptions-for-certain-classes-of-transactions.md": {
+      "policy_id": "12 CFR 1002.3",
+      "title": "Regulation B (Equal Credit Opportunity Act): Limited exceptions for certain classes of transactions",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.3"
+    },
+    "12-CFR-1002.4-regulation-b-equal-credit-opportunity-act-general-rules.md": {
+      "policy_id": "12 CFR 1002.4",
+      "title": "Regulation B (Equal Credit Opportunity Act): General rules",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.4"
+    },
+    "12-CFR-1002.5-regulation-b-equal-credit-opportunity-act-rules-concerning-requests-for-information.md": {
+      "policy_id": "12 CFR 1002.5",
+      "title": "Regulation B (Equal Credit Opportunity Act): Rules concerning requests for information",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.5"
+    },
+    "12-CFR-1002.6-regulation-b-equal-credit-opportunity-act-rules-concerning-evaluation-of-applications.md": {
+      "policy_id": "12 CFR 1002.6",
+      "title": "Regulation B (Equal Credit Opportunity Act): Rules concerning evaluation of applications",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.6"
+    },
+    "12-CFR-1002.7-regulation-b-equal-credit-opportunity-act-rules-concerning-extensions-of-credit.md": {
+      "policy_id": "12 CFR 1002.7",
+      "title": "Regulation B (Equal Credit Opportunity Act): Rules concerning extensions of credit",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.7"
+    },
+    "12-CFR-1002.8-regulation-b-equal-credit-opportunity-act-special-purpose-credit-programs.md": {
+      "policy_id": "12 CFR 1002.8",
+      "title": "Regulation B (Equal Credit Opportunity Act): Special purpose credit programs",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.8"
+    },
+    "12-CFR-1002.9-regulation-b-equal-credit-opportunity-act-notifications.md": {
+      "policy_id": "12 CFR 1002.9",
+      "title": "Regulation B (Equal Credit Opportunity Act): Notifications",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.9"
+    },
+    "12-CFR-1002.10-regulation-b-equal-credit-opportunity-act-furnishing-of-credit-information.md": {
+      "policy_id": "12 CFR 1002.10",
+      "title": "Regulation B (Equal Credit Opportunity Act): Furnishing of credit information",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.10"
+    },
+    "12-CFR-1002.11-regulation-b-equal-credit-opportunity-act-relation-to-state-law.md": {
+      "policy_id": "12 CFR 1002.11",
+      "title": "Regulation B (Equal Credit Opportunity Act): Relation to state law",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.11"
+    },
+    "12-CFR-1002.12-regulation-b-equal-credit-opportunity-act-record-retention.md": {
+      "policy_id": "12 CFR 1002.12",
+      "title": "Regulation B (Equal Credit Opportunity Act): Record retention",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.12"
+    },
+    "12-CFR-1002.13-regulation-b-equal-credit-opportunity-act-information-for-monitoring-purposes.md": {
+      "policy_id": "12 CFR 1002.13",
+      "title": "Regulation B (Equal Credit Opportunity Act): Information for monitoring purposes",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.13"
+    },
+    "12-CFR-1002.14-regulation-b-equal-credit-opportunity-act-rules-on-providing-appraisals-and-other-valuations.md": {
+      "policy_id": "12 CFR 1002.14",
+      "title": "Regulation B (Equal Credit Opportunity Act): Rules on providing appraisals and other valuations",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.14"
+    },
+    "12-CFR-1002.15-regulation-b-equal-credit-opportunity-act-incentives-for-self-testing-and-self-correction.md": {
+      "policy_id": "12 CFR 1002.15",
+      "title": "Regulation B (Equal Credit Opportunity Act): Incentives for self-testing and self-correction",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.15"
+    },
+    "12-CFR-1002.16-regulation-b-equal-credit-opportunity-act-enforcement-penalties-and-liabilities.md": {
+      "policy_id": "12 CFR 1002.16",
+      "title": "Regulation B (Equal Credit Opportunity Act): Enforcement, penalties and liabilities",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1002.16"
+    },
+    "12-CFR-1026.43-regulation-z-truth-in-lending-minimum-standards-for-transactions-secured-by-a-dwelling.md": {
+      "policy_id": "12 CFR 1026.43",
+      "title": "Regulation Z (Truth in Lending): Minimum standards for transactions secured by a dwelling",
+      "source": "Electronic Code of Federal Regulations (eCFR), Title 12",
+      "version": "as in force on 2026-07-21",
+      "source_url": "https://www.ecfr.gov/on/2026-07-21/title-12/section-1026.43"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="420" viewBox="0 0 860 420" role="img" aria-label="Event Outputs on the event dashboard. 1: NeptuneNotebookURL, which opens your notebook instance. 2: URL and Password, which open Kiro, for later.">
+<title>Event Outputs on the event dashboard. 1: NeptuneNotebookURL, which opens your notebook instance. 2: URL and Password, which open Kiro, for later.</title>
+<rect x="0" y="0" width="860" height="420" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
+<rect x="24" y="64" width="812" height="300" rx="14" fill="#fff" stroke="#d1d5db" stroke-width="1"/>
+<text x="48" y="104" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#16191f" text-anchor="start">Event Outputs</text>
+<text x="205" y="104" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="22" font-weight="400" fill="#5f6b7a" text-anchor="start">(3)</text>
+<rect x="48" y="124" width="440" height="34" rx="8" fill="#fff" stroke="#8c8c94" stroke-width="1"/>
+<text x="84" y="146" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5f6b7a" text-anchor="start">Search</text>
+<circle cx="66" cy="140" r="6" fill="none" stroke="#16191f" stroke-width="2"/><path d="M70 144l5 5" stroke="#16191f" stroke-width="2"/>
+<text x="48" y="196" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#16191f" text-anchor="start">Key</text>
+<text x="268" y="196" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#16191f" text-anchor="start">Value</text>
+<text x="620" y="196" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#16191f" text-anchor="start">Stack name</text>
+<path d="M48 210H812" stroke="#d1d5db"/>
+<text x="58" y="240" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#16191f" text-anchor="start">NeptuneNotebookURL</text>
+<text x="268" y="240" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#0972d3" text-anchor="start">https://us-west-2.console.aws.amazon.com/…</text>
+<text x="620" y="240" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#16191f" text-anchor="start">workshop stack</text>
+<path d="M48 256H812" stroke="#eef0f2"/>
+<text x="58" y="282" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#16191f" text-anchor="start">URL</text>
+<text x="268" y="282" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#0972d3" text-anchor="start">https://d1a2b3c4d5e6f7.cloudfront.net/?tkn=…</text>
+<text x="620" y="282" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#16191f" text-anchor="start">Kiro IDE stack</text>
+<path d="M48 298H812" stroke="#eef0f2"/>
+<text x="58" y="324" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#16191f" text-anchor="start">Password</text>
+<text x="268" y="324" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#16191f" text-anchor="start">••••••••••••</text>
+<text x="620" y="324" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#16191f" text-anchor="start">Kiro IDE stack</text>
+<path d="M48 340H812" stroke="#eef0f2"/>
+<rect x="44" y="220" width="772" height="34" rx="6" fill="none" stroke="#6d4ae0" stroke-width="2.5"/>
+<circle cx="22" cy="237" r="15" fill="#6d4ae0"/>
+<text x="22" y="242.5" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+<rect x="44" y="262" width="772" height="76" rx="6" fill="none" stroke="#6d4ae0" stroke-width="2.5"/>
+<circle cx="22" cy="300" r="15" fill="#6d4ae0"/>
+<text x="22" y="305.5" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+<rect x="710" y="374" width="140" height="36" rx="6" fill="#232f3e" stroke="none" stroke-width="1"/>
+<text x="722" y="389" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="start">Mock</text>
+<text x="722" y="403" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#d1d5db" text-anchor="start">Not a real screenshot</text>
+</svg>

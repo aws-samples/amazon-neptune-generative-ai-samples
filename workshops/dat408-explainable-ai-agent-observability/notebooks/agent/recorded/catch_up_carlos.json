@@ -1,0 +1,238 @@
+{
+ "recorded": "recorded on the dev stack, 2026-10-22",
+ "application_id": "LA-2026-00148",
+ "items": [
+  {
+   "kb_ingestion_job_id": "VDZ2SGXIXC",
+   "model_id": "us.anthropic.claude-sonnet-5",
+   "evaluation_id": "a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "started_at": "2026-10-22T17:27:28.072834+00:00",
+   "knowledge_base_id": "3EUD98LW11",
+   "prompt_version": "3b5dd80ee9a6",
+   "status": "COMPLETE",
+   "PK": "EVAL#a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "agent_build": "49faedeebaf2",
+   "outcome": "deny",
+   "completed_at": "2026-10-22T17:27:59.752202+00:00",
+   "ttl": 2013442079.0,
+   "application_id": "LA-2026-00148",
+   "SK": "META"
+  },
+  {
+   "derogatory_marks": 2.0,
+   "SK": "STEP#000",
+   "observation_summary": "{\"tool\": \"pull_credit_report\", \"application_id\": \"LA-2026-00148\", \"credit_score\": 618, \"score_model\": \"FICO 10T\", \"payment_history\": \"fair\", \"derogatory_marks\": 2, \"credit_utilization\": 0.67, \"credit_utilization_pct\": \"67%\", \"credit_history_years\": 3, \"open_accounts\": 4, \"hard_inquiries_12mo\": 4, \"report_date\": \"2026-08-01\", \"bureau\": \"Tri-Merge (Equifax/Experian/TransUnion)\"}",
+   "thought": "I need to start by pulling the applicant's credit report to assess credit history and score.",
+   "credit_score": 618.0,
+   "evaluation_id": "a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "action": "pull_credit_report",
+   "action_input": "{\"application_id\": \"LA-2026-00148\"}",
+   "is_decision": false,
+   "PK": "EVAL#a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "step_num": 0.0,
+   "ttl": 2013442079.0,
+   "application_id": "LA-2026-00148",
+   "observation_s3_uri": "s3://workshop-infra-traceoverflowbucket-fyp2ccrrr0tr/evidence/a6154138-c8d8-4e64-8bb8-21f38d8741b1/STEP#000.json",
+   "step_timestamp": "2026-10-22T17:27:28.072834+00:00",
+   "observation_sha256": "0c7198ef0d27bafaf8c064c2b531e0da9e7d0860daa564e0ffa93a52f6b23727"
+  },
+  {
+   "verified_annual_income": 45000.0,
+   "evaluation_id": "a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "action_input": "{\"application_id\": \"LA-2026-00148\"}",
+   "observation_summary": "{\"tool\": \"verify_income\", \"application_id\": \"LA-2026-00148\", \"verified_annual_income\": 45000, \"verified_monthly_income\": 3750.0, \"stated_annual_income\": 48000, \"income_discrepancy_pct\": \"6.2%\", \"income_match\": true, \"employment_status\": \"full_time\", \"employer\": \"AnyCompany Retail\", \"position\": \"Assistant Manager\", \"years_at_current_employer\": 1, \"employment_verified\": true, \"income_type\": \"salary\", \"verification_method\": \"The Work Number (automated)\", \"verification_date\": \"2026-08-01\"}",
+   "thought": "Credit score is 618 with fair payment history, 2 derogatory marks, high utilization. Next, let's verify income and employment.",
+   "is_decision": false,
+   "action": "verify_income",
+   "PK": "EVAL#a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "observation_s3_uri": "s3://workshop-infra-traceoverflowbucket-fyp2ccrrr0tr/evidence/a6154138-c8d8-4e64-8bb8-21f38d8741b1/STEP#001.json",
+   "SK": "STEP#001",
+   "ttl": 2013442079.0,
+   "application_id": "LA-2026-00148",
+   "step_num": 1.0,
+   "observation_sha256": "cc56908bf6a90d4b99f9eeaa73c28a3113b1074b72ea9db1478f35a365c710ea",
+   "step_timestamp": "2026-10-22T17:27:30.911631+00:00"
+  },
+  {
+   "SK": "STEP#002",
+   "evaluation_id": "a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "action_input": "{\"application_id\": \"LA-2026-00148\"}",
+   "front_end_dti_pct": 47.2,
+   "step_num": 2.0,
+   "action": "calculate_dti",
+   "observation_s3_uri": "s3://workshop-infra-traceoverflowbucket-fyp2ccrrr0tr/evidence/a6154138-c8d8-4e64-8bb8-21f38d8741b1/STEP#002.json",
+   "is_decision": false,
+   "PK": "EVAL#a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "step_timestamp": "2026-10-22T17:27:32.786658+00:00",
+   "observation_sha256": "ceba728b5897365153f0dfd952b5933dc9d5ff021edc839bdba37e27b511b607",
+   "observation_summary": "{\"tool\": \"calculate_dti\", \"application_id\": \"LA-2026-00148\", \"gross_monthly_income\": 3750.0, \"existing_monthly_debt\": 440, \"proposed_monthly_payment\": 1770, \"total_monthly_obligations\": 2210, \"back_end_dti_ratio\": 0.5893, \"back_end_dti_pct\": \"58.9%\", \"front_end_dti_ratio\": 0.472, \"front_end_dti_pct\": \"47.2%\", \"monthly_disposable_income\": 1540.0, \"debt_components\": [{\"monthly\": 280, \"type\": \"credit_cards\"}, {\"monthly\": 160, \"type\": \"personal_loan\"}, {\"monthly\": 1770, \"type\": \"proposed_mortgage\"}]}",
+   "ttl": 2013442079.0,
+   "application_id": "LA-2026-00148",
+   "thought": "Income is verified with a modest discrepancy, employment stable for 1 year. Now let's calculate DTI.",
+   "back_end_dti_pct": 58.93
+  },
+  {
+   "observation_summary": "{\"tool\": \"evaluate_collateral\", \"application_id\": \"LA-2026-00148\", \"collateral_type\": \"single_family\", \"appraised_value\": 285000, \"loan_amount\": 280000, \"ltv_ratio\": 0.9825, \"ltv_pct\": \"98.2%\", \"appraisal_status\": \"complete\", \"condition\": \"fair\", \"property_address\": \"1847 Elm Street, Dallas TX 75201\", \"appraisal_date\": \"2026-07-28\", \"appraiser_license\": \"ST-2026-03195\"}",
+   "action": "evaluate_collateral",
+   "evaluation_id": "a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "action_input": "{\"application_id\": \"LA-2026-00148\"}",
+   "is_decision": false,
+   "ltv_pct": 98.25,
+   "observation_sha256": "434374a853063446f89fd1db26884502064d3124e2bc70bd05b10ba42f925877",
+   "PK": "EVAL#a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "observation_s3_uri": "s3://workshop-infra-traceoverflowbucket-fyp2ccrrr0tr/evidence/a6154138-c8d8-4e64-8bb8-21f38d8741b1/STEP#003.json",
+   "SK": "STEP#003",
+   "ttl": 2013442079.0,
+   "application_id": "LA-2026-00148",
+   "step_num": 3.0,
+   "thought": "DTI is very high \u2014 back-end 58.9%, front-end 47.2%. Now let's evaluate collateral/LTV.",
+   "step_timestamp": "2026-10-22T17:27:34.731427+00:00"
+  },
+  {
+   "evaluation_id": "a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "step_num": 4.0,
+   "is_decision": false,
+   "retrieved_policy_versions": {
+    "12 CFR 1026.43": "as in force on 2026-07-21",
+    "HUD 4000.1 II.A.2.b": "Update 18, issued 2026-08-12; section effective 2021-02-16",
+    "HUD 4000.1 II.A.4.b": "Update 18, issued 2026-08-12; section effective 2025-04-10"
+   },
+   "PK": "EVAL#a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "observation_summary": "{\"tool\": \"retrieve_lending_policy\", \"application_id\": \"LA-2026-00148\", \"query\": \"maximum LTV for a purchase based on minimum decision credit score\", \"num_results\": 5, \"policy_excerpts\": [{\"rank\": 1, \"policy_reference\": \"HUD 4000.1 II.A.4.b\", \"policy_version\": \"Update 18, issued 2026-08-12; section effective 2025-04-10\", \"chunk_id\": \"f26b8f63-b1aa-4216-a611-c5efb458bcd3\", \"source_document\": \"HUD-4000.1-II.A.4.b-credit-requirements-total.md\", \"relevance_score\": 1.0435, \"content\": \"Evaluating Credit History (TOTAL) The Mortgagee must analyze the Borrower\\u2019s credit history in accordance with the Accept Risk Classifications Requiring a Downgrade to Manual Underwriting (TOTAL) section. If a determination is made that the Mortgage must be downgraded to manual underwriting, the Mortgagee must cease its use of the AUS and comply with all requirements for manual underwriting when underwriting a downgraded Mortgage. (A) Collection Accounts, Charge Off Accounts, Accounts with Late Payments in the Previous 24 Months, and Judgments (TOTAL) The Mortgagee is not required to obtain an explanation of collection accounts, Charge Off Accounts, accounts with late payments, Judgments or other derogatory information. (B) Disputed Derogatory Credit Accounts (TOTAL) (1) Definition Disputed Derogatory Credit Account refers to disputed Charge Off Accounts, disputed collection accounts, and disputed accounts with late payments in the last 24 months. (2) Standard If the credit report utilized by TOTAL Mortgage Scorecard indicates that the Borrower has $1,000 or more collectively in Disputed Derogatory Credit Accounts, the Mortgage must be downgraded to a Refer and manually underwritten. Exclusions from cumulative balance include: \\u2022 disputed medical accounts; and \\u2022 disputed derogatory credit resulting from identity theft, credit card theft or unauthorized use. To exclude these balances, the Mortgagee must include a copy of the police report or other documentation from the creditor to",
+   "SK": "STEP#004",
+   "retrieved_chunk_ids": [
+    "55afc382-0283-4a7d-b328-c54763064b90",
+    "69a7e963-2982-4b74-9cd4-a50cdfdfe5b2",
+    "8e912539-019d-4ec2-8c43-660a51336b25",
+    "b4eb3cc1-b373-4cb3-a2c3-64cb06862fd2",
+    "f26b8f63-b1aa-4216-a611-c5efb458bcd3"
+   ],
+   "action": "retrieve_lending_policy",
+   "ttl": 2013442079.0,
+   "application_id": "LA-2026-00148",
+   "observation_s3_uri": "s3://workshop-infra-traceoverflowbucket-fyp2ccrrr0tr/evidence/a6154138-c8d8-4e64-8bb8-21f38d8741b1/STEP#004.json",
+   "observation_sha256": "a7d970abcf349f2256bc9fd2bd0bd5b5a5d35f5914fc0b3879a7140ab33c31d1",
+   "retrieved_policy_ids": [
+    "12 CFR 1026.43",
+    "HUD 4000.1 II.A.2.b",
+    "HUD 4000.1 II.A.4.b"
+   ],
+   "step_timestamp": "2026-10-22T17:27:37.576489+00:00",
+   "action_input": "{\"query\": \"maximum LTV for a purchase based on minimum decision credit score\"}",
+   "thought": "LTV is 98.2%, very high. Now let's retrieve policy on minimum credit score and LTV limits."
+  },
+  {
+   "retrieved_chunk_ids": [
+    "9ed8baa6-ef26-4699-9870-bb4b01b89e0f",
+    "bc56ac39-50ad-46fb-a646-b1de34820b0f",
+    "cec4302f-b21a-49d2-b68a-95c2d8175e90",
+    "f1569d0e-d187-4fb3-8d76-ab83e7bef5c6",
+    "fb732125-d498-4a58-8a93-45b409e1ac0e"
+   ],
+   "observation_s3_uri": "s3://workshop-infra-traceoverflowbucket-fyp2ccrrr0tr/evidence/a6154138-c8d8-4e64-8bb8-21f38d8741b1/STEP#005.json",
+   "observation_sha256": "a54d96e3b8bc811f7d52b92d470640ff9e8b29bbda9ee174fd123475e3d9d8a6",
+   "retrieved_policy_ids": [
+    "HUD 4000.1 II.A.4.a",
+    "HUD 4000.1 II.A.5.d"
+   ],
+   "thought": "Need to check the qualifying ratio limits and compensating factor requirements for manual underwriting given the high DTI.",
+   "evaluation_id": "a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "step_timestamp": "2026-10-22T17:27:41.670113+00:00",
+   "action_input": "{\"query\": \"qualifying ratio limits and compensating factors for manual underwriting\"}",
+   "is_decision": false,
+   "observation_summary": "{\"tool\": \"retrieve_lending_policy\", \"application_id\": \"LA-2026-00148\", \"query\": \"qualifying ratio limits and compensating factors for manual underwriting\", \"num_results\": 5, \"policy_excerpts\": [{\"rank\": 1, \"policy_reference\": \"HUD 4000.1 II.A.4.a\", \"policy_version\": \"Update 18, issued 2026-08-12; section effective 2026-11-10\", \"chunk_id\": \"cec4302f-b21a-49d2-b68a-95c2d8175e90\", \"source_document\": \"HUD-4000.1-II.A.4.a-underwriting-with-an-automated-underwriting-system.md\", \"relevance_score\": 1.2406, \"content\": \"The Mortgagee must analyze the Feedback Certificate and determine if the reason for the ineligibility is one that can be resolved in a manner that complies with FHA underwriting requirements. If the Mortgagee can correct the reason for ineligibility, the Mortgagee may rescore the Mortgage in the AUS. When the reason for ineligibility cannot be corrected in the AUS, the Mortgagee may underwrite the Mortgage using the following requirements for an Accept Mortgage, but must resolve the reason for ineligibility in accordance with FHA requirements and must provide an explanation of the resolution in the remarks section of form HUD- 92900-LT, FHA Loan Underwriting and Transmittal Summary. (C) Refer The underwriter must manually underwrite any mortgage application for which the Feedback Certificate shows a Refer recommendation or any result other than those described above. v. Accept Risk Classifications Requiring a Downgrade to Manual Underwriting (TOTAL) The Mortgagee must downgrade and manually underwrite any Mortgage that received an Accept recommendation if: \\u2022 the mortgage file contains information or documentation that cannot be entered into or evaluated by TOTAL Mortgage Scorecard; \\u2022 additional information, not considered in the AUS recommendation affects the overall insurability of the Mortgage; \\u2022 the Borrower has $1,000 or more collectively in Disputed Derogatory Credit Accounts; \\u2022 the date of the Borrower\\u2019s bankruptcy discharge as ref",
+   "PK": "EVAL#a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "step_num": 5.0,
+   "action": "retrieve_lending_policy",
+   "ttl": 2013442079.0,
+   "application_id": "LA-2026-00148",
+   "retrieved_policy_versions": {
+    "HUD 4000.1 II.A.4.a": "Update 18, issued 2026-08-12; section effective 2026-11-10",
+    "HUD 4000.1 II.A.5.d": "Update 18, issued 2026-08-12; section effective 2026-11-10"
+   },
+   "SK": "STEP#005"
+  },
+  {
+   "evaluation_id": "a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "observation_sha256": "2731ce37c53fc97039c8829806e59bde69b1e7677e4868d41b1b3f66eebc5128",
+   "observation_summary": "{\"tool\": \"retrieve_lending_policy\", \"application_id\": \"LA-2026-00148\", \"query\": \"derogatory credit history requirements manual underwriting credit score minimum\", \"num_results\": 5, \"policy_excerpts\": [{\"rank\": 1, \"policy_reference\": \"HUD 4000.1 II.A.4.a\", \"policy_version\": \"Update 18, issued 2026-08-12; section effective 2026-11-10\", \"chunk_id\": \"cec4302f-b21a-49d2-b68a-95c2d8175e90\", \"source_document\": \"HUD-4000.1-II.A.4.a-underwriting-with-an-automated-underwriting-system.md\", \"relevance_score\": 1.4612, \"content\": \"The Mortgagee must analyze the Feedback Certificate and determine if the reason for the ineligibility is one that can be resolved in a manner that complies with FHA underwriting requirements. If the Mortgagee can correct the reason for ineligibility, the Mortgagee may rescore the Mortgage in the AUS. When the reason for ineligibility cannot be corrected in the AUS, the Mortgagee may underwrite the Mortgage using the following requirements for an Accept Mortgage, but must resolve the reason for ineligibility in accordance with FHA requirements and must provide an explanation of the resolution in the remarks section of form HUD- 92900-LT, FHA Loan Underwriting and Transmittal Summary. (C) Refer The underwriter must manually underwrite any mortgage application for which the Feedback Certificate shows a Refer recommendation or any result other than those described above. v. Accept Risk Classifications Requiring a Downgrade to Manual Underwriting (TOTAL) The Mortgagee must downgrade and manually underwrite any Mortgage that received an Accept recommendation if: \\u2022 the mortgage file contains information or documentation that cannot be entered into or evaluated by TOTAL Mortgage Scorecard; \\u2022 additional information, not considered in the AUS recommendation affects the overall insurability of the Mortgage; \\u2022 the Borrower has $1,000 or more collectively in Disputed Derogatory Credit Accounts; \\u2022 the date of the Borrower\\u2019s bankruptcy discharge",
+   "observation_s3_uri": "s3://workshop-infra-traceoverflowbucket-fyp2ccrrr0tr/evidence/a6154138-c8d8-4e64-8bb8-21f38d8741b1/STEP#006.json",
+   "is_decision": false,
+   "SK": "STEP#006",
+   "retrieved_policy_versions": {
+    "HUD 4000.1 II.A.4.a": "Update 18, issued 2026-08-12; section effective 2026-11-10",
+    "HUD 4000.1 II.A.4.b": "Update 18, issued 2026-08-12; section effective 2025-04-10",
+    "HUD 4000.1 II.A.5.a": "Update 18, issued 2026-08-12; section effective 2026-11-10"
+   },
+   "PK": "EVAL#a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "action": "retrieve_lending_policy",
+   "ttl": 2013442079.0,
+   "application_id": "LA-2026-00148",
+   "retrieved_chunk_ids": [
+    "6588e772-096f-4915-9dba-4d80a04f7b8f",
+    "7e6cd985-c0c2-4434-9a36-041a85c3cc9f",
+    "bbf82137-f9da-466a-87c2-44e97fb879bd",
+    "cec4302f-b21a-49d2-b68a-95c2d8175e90",
+    "f26b8f63-b1aa-4216-a611-c5efb458bcd3"
+   ],
+   "action_input": "{\"query\": \"derogatory credit history requirements manual underwriting credit score minimum\"}",
+   "step_timestamp": "2026-10-22T17:27:46.053499+00:00",
+   "retrieved_policy_ids": [
+    "HUD 4000.1 II.A.4.a",
+    "HUD 4000.1 II.A.4.b",
+    "HUD 4000.1 II.A.5.a"
+   ],
+   "step_num": 6.0,
+   "thought": "I should check derogatory credit policy given the fair payment history and 2 derogatory marks, to see if that's independently disqualifying."
+  },
+  {
+   "dti_band": "dti:50-100",
+   "SK": "STEP#007",
+   "policies_cited": [
+    "HUD 4000.1 II.A.2.b",
+    "HUD 4000.1 II.A.5.d",
+    "HUD 4000.1 II.A.4.a",
+    "HUD 4000.1 II.A.4.b",
+    "HUD 4000.1 II.A.5.a",
+    "12 CFR 1026.43"
+   ],
+   "thought": "Final decision: deny",
+   "adverse_action_reasons": [
+    "Loan-to-value ratio (98.2%) exceeds the maximum permitted for this FHA purchase transaction (96.5%)",
+    "Debt-to-income ratio (58.9% back-end / 47.2% front-end) exceeds the maximum allowable ratios for manually underwritten FHA loans, even with compensating factors (40%/50% maximum)",
+    "Insufficient qualifying income relative to total monthly debt obligations to support the requested loan amount"
+   ],
+   "evaluation_id": "a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "observation_s3_uri": "s3://workshop-infra-traceoverflowbucket-fyp2ccrrr0tr/evidence/a6154138-c8d8-4e64-8bb8-21f38d8741b1/STEP#007.json",
+   "observation_summary": "{\"decision\": \"deny\", \"reasoning\": \"The application violates two independent FHA manual-underwriting requirements with no available cure. (1) The requested LTV is 98.2% ($280,000 loan on a $285,000 appraised value), which exceeds the maximum purchase LTV of 96.5% of Adjusted Value permitted under HUD 4000.1 II.A.2.b. (2) The calculated qualifying ratios are 47.2% front-end (PTI) and 58.9% back-end (DTI), which exceed even the highest manual-underwriting stretch tier of 40/50 available under HUD 4000.1 II.A.5.d viii for Borrowers with a Minimum Decision Credit Score of 580 or above with two documented compensating factors. Because the ratios exceed the maximum permissible tier outright, no combination of compensating factors (cash reserves, minimal payment increase, residual income, or additional income) can cure this deficiency per HUD 4000.1 II.A.5.d ix. The credit score of 618 is itself above the 580 minimum decision threshold and would otherwise support maximum financing, but the LTV and DTI violations are independently disqualifying.\", \"policies_cited\": [\"HUD 4000.1 II.A.2.b\", \"HUD 4000.1 II.A.5.d\", \"HUD 4000.1 II.A.4.a\", \"HUD 4000.1 II.A.4.b\", \"HUD 4000.1 II.A.5.a\", \"12 CFR 1026.43\"], \"policies_violated\": [\"HUD 4000.1 II.A.2.b\", \"HUD 4000.1 II.A.5.d viii\"], \"risk_factors\": [\"Loan-to-value ratio of 98.2% exceeds the 96.5% maximum for FHA purchase transactions\", \"Back-end DTI of 58.9% exceeds the maximum allowable 50% even under the most permissive compensating-factor tier\", \"Front-end PTI of 47.2% exceeds the maximum allowable 40% even under the most permissive compensating-factor tier\", \"Credit score of 618 with fair payment history and 2 derogatory marks\", \"Credit utilization of 67%, considered high\", \"4 hard inquiries in the last 12 months\", \"Only 1 year at current employer\", \"Minimal monthly disposable income ($1,540) relative to total obligations\"], \"adverse_action_reasons\": [\"Loan-to-value ratio (98.2%) exceeds the maximum permitted for this FHA purchase tr",
+   "reasoning": "The application violates two independent FHA manual-underwriting requirements with no available cure. (1) The requested LTV is 98.2% ($280,000 loan on a $285,000 appraised value), which exceeds the maximum purchase LTV of 96.5% of Adjusted Value permitted under HUD 4000.1 II.A.2.b. (2) The calculated qualifying ratios are 47.2% front-end (PTI) and 58.9% back-end (DTI), which exceed even the highest manual-underwriting stretch tier of 40/50 available under HUD 4000.1 II.A.5.d viii for Borrowers with a Minimum Decision Credit Score of 580 or above with two documented compensating factors. Because the ratios exceed the maximum permissible tier outright, no combination of compensating factors (cash reserves, minimal payment increase, residual income, or additional income) can cure this deficiency per HUD 4000.1 II.A.5.d ix. The credit score of 618 is itself above the 580 minimum decision threshold and would otherwise support maximum financing, but the LTV and DTI violations are independently disqualifying.",
+   "ltv_band": "ltv:96.5-200",
+   "credit_band": "credit:580-619",
+   "step_timestamp": "2026-10-22T17:27:59.752202+00:00",
+   "step_num": 7.0,
+   "PK": "EVAL#a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+   "action": "FINAL_DECISION",
+   "observation_sha256": "7286696885fd9200543ae4cf9d1f5ffa911d3a44f7bc0605dea1eb74065ce333",
+   "outcome": "deny",
+   "action_input": "{\"decision\": \"deny\", \"reasoning\": \"The application violates two independent FHA manual-underwriting requirements with no available cure. (1) The requested LTV is 98.2% ($280,000 loan on a $285,000 appraised value), which exceeds the maximum purchase LTV of 96.5% of Adjusted Value permitted under HUD 4000.1 II.A.2.b. (2) The calculated qualifying ratios are 47.2% front-end (PTI) and 58.9% back-end (DTI), which exceed even the highest manual-underwriting stretch tier of 40/50 available under HUD 4000.1 II.A.5.d viii for Borrowers with a Minimum Decision Credit Score of 580 or above with two documented compensating factors. Because the ratios exceed the maximum permissible tier outright, no combination of compensating factors (cash reserves, minimal payment increase, residual income, or additional income) can cure this deficiency per HUD 4000.1 II.A.5.d ix. The credit score of 618 is itself above the 580 minimum decision threshold and would otherwise support maximum financing, but the LTV",
+   "ttl": 2013442079.0,
+   "application_id": "LA-2026-00148",
+   "risk_factors": [
+    "Loan-to-value ratio of 98.2% exceeds the 96.5% maximum for FHA purchase transactions",
+    "Back-end DTI of 58.9% exceeds the maximum allowable 50% even under the most permissive compensating-factor tier",
+    "Front-end PTI of 47.2% exceeds the maximum allowable 40% even under the most permissive compensating-factor tier",
+    "Credit score of 618 with fair payment history and 2 derogatory marks",
+    "Credit utilization of 67%, considered high",
+    "4 hard inquiries in the last 12 months",
+    "Only 1 year at current employer",
+    "Minimal monthly disposable income ($1,540) relative to total obligations"
+   ],
+   "citation_check": "PASSED",
+   "policies_violated": [
+    "HUD 4000.1 II.A.2.b",
+    "HUD 4000.1 II.A.5.d viii"
+   ],
+   "is_decision": true
+  }
+ ]
+}

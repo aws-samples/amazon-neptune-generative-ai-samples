@@ -1,0 +1,6 @@
+{
+  "_about": "The settings the guard's rules read, passed to every query as parameters. Change a value here, and the next report uses it, with no change to a query. Sources: OFAC's 50 Percent Rule FAQs (https://ofac.treasury.gov/faqs/topic/1521) and the DHS UFLPA Entity List (https://www.dhs.gov/uflpa-entity-list).",
+  "ofac_threshold": 50,
+  "uflpa_list": "UFLPA Entity List",
+  "uflpa_country": "US"
+}

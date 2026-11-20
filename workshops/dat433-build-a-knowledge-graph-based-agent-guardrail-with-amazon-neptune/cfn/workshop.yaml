@@ -1,0 +1,1249 @@
+# MIT No Attribution
+#
+# Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this
+# software and associated documentation files (the "Software"), to deal in the Software
+# without restriction, including without limitation the rights to use, copy, modify,
+# merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+# SPDX-License-Identifier: MIT-0
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Build a Knowledge Graph-Based Agent Guardrail with Amazon Neptune.
+  Provisions: VPC, Amazon Neptune cluster (db.r8g.xlarge), SageMaker notebook instance
+  with lifecycle config that installs dependencies and writes the Neptune endpoint
+  to a config file readable by the workshop notebook.
+
+  NOTE: The agent uses Claude Sonnet 5 via the cross-region inference profile
+  us.anthropic.claude-sonnet-5. Model access is handled via inference profiles
+  (no manual Bedrock Model Access enablement needed).
+
+Parameters:
+  # --- Workshop Studio provided parameters ---
+  BucketName:
+    Type: String
+    Default: ""
+    Description: Workshop Studio assets S3 bucket name (auto-populated by Workshop Studio).
+
+  BucketPrefix:
+    Type: String
+    Default: ""
+    Description: Workshop Studio assets prefix within the bucket (auto-populated by Workshop Studio).
+
+  AssumedRoleARNStr:
+    Type: String
+    Default: ""
+    Description: Participant's assumed IAM role ARN from Workshop Studio (auto-populated).
+
+  # --- Workshop-specific parameters ---
+  NotebookInstanceType:
+    Type: String
+    Default: ml.t3.xlarge
+    AllowedValues:
+      - ml.t3.medium
+      - ml.t3.large
+      - ml.t3.xlarge
+    Description: SageMaker notebook instance type
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: SageMaker Configuration
+        Parameters:
+          - NotebookInstanceType
+    ParameterLabels:
+      NotebookInstanceType:
+        default: Notebook Instance Type
+
+Resources:
+
+  # ── VPC ──────────────────────────────────────────────────────────────────────
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: guardrail-vpc
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: guardrail-igw
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # Two public subnets in different AZs — required by Neptune subnet group
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: guardrail-public-subnet-1
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: guardrail-public-subnet-2
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: guardrail-public-rt
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  Subnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  Subnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  # ── Private subnets + NAT gateway for AgentCore Runtime ───────────────────────
+  # AWS's own docs are explicit and easy to miss: "Connecting Amazon Bedrock
+  # AgentCore Runtime ... to public subnets does not provide internet access.
+  # Always use private subnets with NAT gateways for internet connectivity."
+  # AgentCore Runtime's ENIs, even when placed in PublicSubnet1/2 above (which
+  # have an IGW route and work fine for the SageMaker notebook and Neptune),
+  # do NOT get outbound internet access that way - AgentCore's networking
+  # model requires a NAT gateway specifically. Without this, a hosted agent's
+  # calls to Bedrock's public endpoint (or anything else on the internet)
+  # hang indefinitely: no error, no CloudWatch logs (even log delivery needs
+  # an internet/NAT path), just a silent timeout on invoke_agent_runtime.
+  # This was diagnosed against a real deployment: READY status at every
+  # control-plane check, zero log group ever created, ReadTimeoutError on
+  # every invocation - exactly the signature of an agent with no route out.
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: guardrail-nat-eip
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      # NAT gateways live in a PUBLIC subnet (they need the IGW route
+      # themselves); it is the PRIVATE subnets' route tables that point AT
+      # this NAT gateway, giving resources in the private subnets outbound
+      # internet access without a public IP of their own.
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: guardrail-nat-gateway
+
+  # Created across FOUR of the account's AZs, not just two: CloudFormation
+  # has no native way to filter Fn::GetAZs by AZ ID (confirmed - AZ NAME to
+  # AZ ID mapping is randomized per AWS account, and there is no intrinsic
+  # function that resolves it; this needs either a custom Lambda-backed
+  # resource or, as done here, over-provisioning). AgentCore Runtime only
+  # supports a specific subset of AZ IDs per Region (for us-east-1:
+  # use1-az1, use1-az2, use1-az4 - confirmed against a real CREATE_FAILED
+  # error naming exactly this list). By creating subnets in 4 AZs instead of
+  # 2, deploy_agent.py's setup step (run with real credentials, which CFN's
+  # template language does not have) can call ec2:DescribeAvailabilityZones,
+  # filter to AgentCore-supported AZ IDs, and pick 2 matching subnets from
+  # this set - rather than CloudFormation guessing blindly and failing at
+  # AgentCore Runtime creation time, several minutes into a stack deploy.
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.11.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: guardrail-private-subnet-1
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.12.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: guardrail-private-subnet-2
+
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.13.0/24
+      AvailabilityZone: !Select [2, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: guardrail-private-subnet-3
+
+  PrivateSubnet4:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.14.0/24
+      AvailabilityZone: !Select [3, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: guardrail-private-subnet-4
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: guardrail-private-rt
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet3
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet4RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet4
+      RouteTableId: !Ref PrivateRouteTable
+
+  # ── Security Groups ───────────────────────────────────────────────────────────
+  SageMakerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SageMaker notebook - allows all outbound (Bedrock + Neptune)
+      VpcId: !Ref VPC
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: All outbound (internet for Bedrock, VPC for Neptune)
+      Tags:
+        - Key: Name
+          Value: guardrail-sagemaker-sg
+
+  # Attached to the AgentCore Runtime's ENIs (via NetworkConfiguration when the
+  # runtime is created). Same shape as SageMakerSecurityGroup: the hosted agent
+  # needs outbound access to Bedrock (public endpoint, reached through the
+  # subnet's internet route) and to Neptune (in-VPC, granted below).
+  AgentCoreSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: >-
+        AgentCore Runtime ENIs - allows all outbound (Bedrock + Neptune) for
+        the hosted procurement agent
+      VpcId: !Ref VPC
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: All outbound (internet for Bedrock, VPC for Neptune)
+      Tags:
+        - Key: Name
+          Value: guardrail-agentcore-sg
+
+  NeptuneSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: >-
+        Neptune cluster - allows the Neptune endpoint (8182) from SageMaker and
+        from the hosted AgentCore Runtime agent
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8182
+          ToPort: 8182
+          SourceSecurityGroupId: !Ref SageMakerSecurityGroup
+          Description: Neptune data API (openCypher, HTTPS) from SageMaker notebook
+        - IpProtocol: tcp
+          FromPort: 8182
+          ToPort: 8182
+          SourceSecurityGroupId: !Ref AgentCoreSecurityGroup
+          Description: Neptune data API (openCypher, HTTPS) from the AgentCore Runtime agent
+      Tags:
+        - Key: Name
+          Value: guardrail-neptune-sg
+
+  # ── Neptune (provisioned cluster) ─────────────────────────────────────────────
+  NeptuneSubnetGroup:
+    Type: AWS::Neptune::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Neptune subnet group for the knowledge graph guardrail workshop
+      SubnetIds:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: guardrail-neptune-subnet-group
+
+  NeptuneCluster:
+    Type: AWS::Neptune::DBCluster
+    Properties:
+      DBSubnetGroupName: !Ref NeptuneSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref NeptuneSecurityGroup
+      # Pinned to 1.4.8.0. Confirmed against AWS's own engine release notes
+      # page for 1.4.8.0 (docs.aws.amazon.com/neptune/latest/userguide/
+      # engine-releases-1.4.8.0.html), which gives this exact string in its
+      # own documented upgrade command:
+      #   aws neptune modify-db-cluster --engine-version 1.4.8.0 ...
+      # Earlier revisions of this comment guessed at "1.4.7.1" and then
+      # "1.4.8.0.R1" without checking the docs first - both were wrong. Do
+      # not assume a console dropdown label is the literal EngineVersion
+      # string; confirm against the release-notes page's own upgrade command.
+      #
+      # 1.4.7.0 (and any release built on it) must NOT be used: that engine
+      # build's bundled TLS certificate expired 2025-05-01, so every cluster
+      # created on it fails Gremlin/TLS connectivity with
+      # "certificate has expired" regardless of when the cluster itself was
+      # created - confirmed against a live cluster. 1.4.8.0 is a different
+      # base engine build, not a patch on top of the broken one.
+      EngineVersion: 1.4.8.0
+      IamAuthEnabled: false        # Disabled for workshop simplicity; enable for production
+      StorageEncrypted: true
+      DeletionProtection: false
+      # The bulk loader runs as this role to read the dataset CSVs from S3.
+      AssociatedRoles:
+        - RoleArn: !GetAtt NeptuneLoadRole.Arn
+      # Provisioned cluster (a single db.r8g.xlarge instance below), sized to hold
+      # ~120k vertices / ~1.33M edges and keep verification traversals fast.
+      Tags:
+        - Key: Name
+          Value: guardrail-neptune-cluster
+        - Key: Workshop
+          Value: kg-guardrail
+
+  # A Neptune cluster has NO resolvable endpoint until it has at least one
+  # instance behind it. Without this, the cluster still "creates" but the
+  # cluster endpoint fails DNS resolution ("Name or service not known").
+  NeptuneInstance:
+    Type: AWS::Neptune::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref NeptuneCluster
+      DBInstanceClass: db.r8g.xlarge
+      Tags:
+        - Key: Name
+          Value: guardrail-neptune-instance
+        - Key: Workshop
+          Value: kg-guardrail
+
+  # ── Bulk-load data plumbing ───────────────────────────────────────────────────
+  # The workshop dataset (~120k vertices / ~1.33M edges) is generated in the notebook
+  # and bulk-loaded from this bucket. A dedicated bucket keeps it separate from the
+  # read-only Workshop Studio assets bucket.
+  DataBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketName: !Sub guardrail-data-${AWS::AccountId}-${AWS::Region}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - Key: Workshop
+          Value: kg-guardrail
+
+  # ── Stock counts ─────────────────────────────────────────────────────────────
+  # Live stock per warehouse and product. It changes all day, so it lives in its own
+  # system of record, read by key at action time; the graph keeps only that a
+  # warehouse carries a product (the STOCKS edge). The notebook instance fills it at
+  # start (preload_graph.py); the guard and the ranking read it with BatchGetItem.
+  StockTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      TableName: !Sub guardrail-stock-${AWS::StackName}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: warehouse_id
+          AttributeType: S
+        - AttributeName: product_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: warehouse_id
+          KeyType: HASH
+        - AttributeName: product_id
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+      Tags:
+        - Key: Workshop
+          Value: kg-guardrail
+
+  # Agent code zips: AWS does not document which identity CreateAgentRuntime uses to read the code zip from S3.
+  # So the template grants read on the agent code path (guardrail/agents/*) to all three
+  # candidates, as defense in depth: the bedrock-agentcore service here (a bucket
+  # policy, confined to this account to avoid a cross-account confused deputy), the
+  # execution role (AgentCodeS3Read), and the caller (ReadWriteAgentZip on this Lambda's
+  # role, and the notebook role's DataBucket access). Creation works with all three in
+  # place; removing any one has not been tested, and without them it fails with
+  # "Access denied when trying to retrieve zip file from S3".
+  DataBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref DataBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowAgentCoreRetrieveAgentCode
+            Effect: Allow
+            Principal:
+              Service: bedrock-agentcore.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${DataBucket.Arn}/guardrail/agents/*"
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+
+  # Neptune assumes this role to read the CSVs from the data bucket.
+  NeptuneLoadRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub guardrail-neptune-load-role-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: rds.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ReadDatasetFromS3
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !Sub arn:aws:s3:::guardrail-data-${AWS::AccountId}-${AWS::Region}
+                  - !Sub arn:aws:s3:::guardrail-data-${AWS::AccountId}-${AWS::Region}/*
+      Tags:
+        - Key: Workshop
+          Value: kg-guardrail
+
+  # Neptune's subnet group uses the public subnets (the cluster itself is not publicly
+  # accessible), and the bulk loader reaches S3 through this gateway endpoint on their
+  # route table. Without it the loader cannot read the bucket.
+  S3VPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref PublicRouteTable
+
+  # The guarded agent and the MCP server run in the private subnets and read stock
+  # from DynamoDB; this keeps that traffic off the NAT gateway.
+  DynamoDBVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.dynamodb
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref PublicRouteTable
+        - !Ref PrivateRouteTable
+
+  # ── Un-guarded agent auto-deployment (single build-and-deploy Lambda) ─────────
+  #
+  # Workshop Studio is 100% CloudFormation-driven: every attendee's stack is
+  # created automatically with no human step possible between stack creation
+  # and the attendee opening their notebook. So the un-guarded "before" agent
+  # (unguarded_agent.py) must already be running on AgentCore Runtime by the
+  # time the notebook's Start section (Cell 0.2) runs - it cannot be
+  # deployed live by attendees (that live-deploy experience belongs to the
+  # GUARDED agent in Cell 4.4, which IS meant to be an attendee action).
+  #
+  # A single Lambda-backed custom resource (AgentPackageBuild, below) does the
+  # whole job: it runs `pip install --platform manylinux2014_aarch64 ...` to
+  # build the agent's deployment zip (something CFN's template language cannot
+  # do), resolves which candidate subnets sit in an AgentCore-supported AZ, and
+  # calls bedrock-agentcore-control to create/update/delete the AgentCore
+  # Runtime, returning its ARN.
+  #
+  # This deliberately does NOT use the native AWS::BedrockAgentCore::Runtime
+  # resource. That design fed this custom resource's Fn::GetAtt Subnet0/Subnet1
+  # into the native runtime's typed Subnets property, and CloudFormation kept
+  # failing to resolve it ("Vendor response doesn't contain Subnet0 attribute").
+  # Keeping the subnet IDs inside the Lambda and passing them straight into the
+  # create_agent_runtime call removes that coupling entirely.
+
+  AgentPackageBuilderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub guardrail-pkgbuilder-role-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ReadAssetsBucket
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Download unguarded_agent.py from the Workshop Studio assets
+              # bucket - the same object the SageMaker lifecycle script stages
+              # onto the notebook later, in a separate, unrelated process.
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
+                  - !Sub "arn:aws:s3:::${BucketName}/${BucketPrefix}*"
+        - PolicyName: ReadWriteAgentZip
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # PutObject: upload the built agent deployment zip.
+              # GetObject: the caller's share of the defense-in-depth read grant
+              # described above DataBucketPolicy (AWS does not document which identity
+              # reads agent code zips). Scoped to the agent code path only.
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource:
+                  - !Sub "${DataBucket.Arn}/guardrail/agents/*"
+        - PolicyName: DescribeSubnetsForAZFiltering
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Same reason as AgentCoreDeployAccess below: AgentCore Runtime
+              # only supports specific AZ IDs per Region, and AZ NAME to AZ ID
+              # mapping is randomized per AWS account, so this Lambda filters
+              # the candidate private subnets the same way deploy_agent.py's
+              # select_supported_subnets() does for the guarded agent.
+              - Effect: Allow
+                Action: ec2:DescribeSubnets
+                Resource: '*'
+        - PolicyName: AgentCoreDeployAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # This custom resource now creates/updates/deletes the un-guarded
+              # agent's AgentCore Runtime directly (replacing the native
+              # AWS::BedrockAgentCore::Runtime resource, whose Fn::GetAtt
+              # coupling to Subnet0/Subnet1 was the source of the "Vendor
+              # response doesn't contain Subnet0" failure). This block is a
+              # DELIBERATE MIRROR of SageMakerExecutionRole's AgentCoreDeployAccess
+              # below: a single "deploy a runtime" flow spans runtime, endpoint,
+              # tag, and workload-identity actions plus service-linked-role
+              # creation for VPC networking. Enumerating individual actions one
+              # at a time as each call fails with AccessDeniedException is the
+              # wrong approach (and is what wasted prior deploys) - grant the
+              # bedrock-agentcore:* namespace wildcard on arn:aws:bedrock-agentcore:*:*:*,
+              # the same Resource scope as AWS's BedrockAgentCoreFullAccess (not
+              # narrowed to this account or Region; see the notebook role below).
+              - Effect: Allow
+                Action: bedrock-agentcore:*
+                Resource: 'arn:aws:bedrock-agentcore:*:*:*'
+              # AgentCore creates service-linked roles on first use in an
+              # account for VPC/gateway networking and runtime identity when a
+              # runtime with VPC NetworkConfiguration is created. These are
+              # iam:CreateServiceLinkedRole calls the SERVICE makes on your
+              # behalf - required, and not part of bedrock-agentcore:*.
+              - Effect: Allow
+                Action: iam:CreateServiceLinkedRole
+                Resource:
+                  - arn:aws:iam::*:role/aws-service-role/network.bedrock-agentcore.amazonaws.com/AWSServiceRoleForBedrockAgentCoreNetwork
+                  - arn:aws:iam::*:role/aws-service-role/bedrock-agentcore.amazonaws.com/AWSServiceRoleForBedrockAgentCoreGatewayNetwork
+                  - arn:aws:iam::*:role/aws-service-role/runtime-identity.bedrock-agentcore.amazonaws.com/AWSServiceRoleForBedrockAgentCoreRuntimeIdentity
+                  - arn:aws:iam::*:role/aws-service-role/runtime-instances.bedrock-agentcore.amazonaws.com/AWSServiceRoleForBedrockAgentCoreRuntimeInstances
+                Condition:
+                  StringEquals:
+                    iam:AWSServiceName:
+                      - network.bedrock-agentcore.amazonaws.com
+                      - bedrock-agentcore.amazonaws.com
+                      - runtime-identity.bedrock-agentcore.amazonaws.com
+                      - runtime-instances.bedrock-agentcore.amazonaws.com
+              # create_agent_runtime passes the AgentCore execution role to the
+              # bedrock-agentcore service.
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt AgentCoreExecutionRole.Arn
+        - PolicyName: LambdaLogging
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # This function's own log group only (FunctionName is fixed below).
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/guardrail-pkgbuilder-${AWS::StackName}
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/guardrail-pkgbuilder-${AWS::StackName}:*
+      Tags:
+        - Key: Workshop
+          Value: kg-guardrail
+
+  # This Lambda reads the assets bucket, writes one path in DataBucket, calls
+  # ec2:DescribeSubnets for AZ filtering, and bedrock-agentcore-control (the
+  # bedrock-agentcore:* namespace) to create/update/delete the un-guarded runtime,
+  # passing only the AgentCoreExecutionRole. See AgentPackageBuilderRole above.
+  AgentPackageBuilderFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub guardrail-pkgbuilder-${AWS::StackName}
+      Description: >-
+        Custom resource for the un-guarded agent: builds/uploads the zip,
+        filters subnets to AgentCore-supported AZs, and creates the AgentCore
+        Runtime via bedrock-agentcore-control, returning its ARN.
+      Runtime: python3.12
+      Architectures:
+        - x86_64
+      Handler: lambda_build_agent_package.handler
+      Role: !GetAtt AgentPackageBuilderRole.Arn
+      # Generous timeout: pip-builds the arm64 agent zip, then creates the
+      # AgentCore Runtime and polls it to READY (see READY_TIMEOUT_SECONDS in
+      # the handler, kept below this so the CFN response is always sent).
+      Timeout: 900
+      MemorySize: 512
+      Code:
+        S3Bucket: !Ref BucketName
+        S3Key: !Sub "${BucketPrefix}code/lambda_build_agent_package_deployment.zip"
+      Tags:
+        - Key: Workshop
+          Value: kg-guardrail
+
+  # ── Un-guarded agent: build + AgentCore Runtime, in ONE custom resource ───────
+  # This single custom resource builds the deployment zip, filters candidate
+  # subnets to AgentCore-supported AZs, and creates the AgentCore Runtime
+  # directly (via bedrock-agentcore-control), returning AgentRuntimeArn. It
+  # replaces the earlier "custom-resource build + native
+  # AWS::BedrockAgentCore::Runtime" split, whose Fn::GetAtt coupling on
+  # Subnet0/Subnet1 kept failing with "Vendor response doesn't contain Subnet0
+  # attribute": the subnet IDs now never leave the Lambda, so there is no such
+  # attribute for CloudFormation to fail to resolve.
+  #
+  # Created automatically at stack-create time so that, by the time an attendee
+  # opens the notebook, the un-guarded runtime is already READY (or the stack
+  # has failed loudly and the attendee never sees a broken notebook).
+  AgentPackageBuild:
+    Type: AWS::CloudFormation::CustomResource
+    # The bucket policy that lets AgentCore read the code zip must be attached
+    # before this resource calls CreateAgentRuntime, or create fails with the
+    # S3 "Access denied" error. The DataBucket dependency is already implicit
+    # via the DataBucket property; this makes the policy dependency explicit.
+    DependsOn: DataBucketPolicy
+    Properties:
+      ServiceToken: !GetAtt AgentPackageBuilderFunction.Arn
+      AssetsBucketName: !Ref BucketName
+      AssetsBucketPrefix: !Ref BucketPrefix
+      DataBucket: !Ref DataBucket
+      DeployKey: guardrail/agents/unguarded-agent/agent_package.zip
+      AgentCoreCandidateSubnetIds: !Sub "${PrivateSubnet1},${PrivateSubnet2},${PrivateSubnet3},${PrivateSubnet4}"
+      AgentRuntimeName: ProcurementUnguardedAgent
+      EntryPoint: unguarded_agent.py
+      Description: >-
+        Un-guarded "before" agent - no verification traversal; will
+        confidently approve suppliers that should be blocked. Deployed at
+        stack creation so "See the Problem First" needs no live deploy step.
+      RoleArn: !GetAtt AgentCoreExecutionRole.Arn
+      SecurityGroupId: !Ref AgentCoreSecurityGroup
+
+  # ── IAM ───────────────────────────────────────────────────────────────────────
+  SageMakerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub guardrail-sagemaker-role-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSageMakerFullAccess
+        # AmazonBedrockFullAccess grants bedrock:* PLUS the AWS Marketplace actions
+        # (aws-marketplace:ViewSubscriptions/Subscribe) that Bedrock needs to access
+        # models like Claude Sonnet 5. This is exactly what the working dat408
+        # NotebookExecutionRole uses; without it, invoking Sonnet 5 fails with an
+        # AccessDenied citing aws-marketplace:Subscribe (Claude 3.5 did not need it).
+        - arn:aws:iam::aws:policy/AmazonBedrockFullAccess
+      Policies:
+        - PolicyName: BedrockInvokePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Matches the working dat408 reference exactly. In Workshop Studio all
+              # Bedrock models are enabled by default and invoked via cross-region
+              # inference profiles (us.anthropic.claude-sonnet-5), so broad invoke
+              # + read on Resource '*' is all that is required — no Marketplace
+              # subscription or manual model-access enablement.
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                  - bedrock:GetInferenceProfile
+                  - bedrock:ListInferenceProfiles
+                  - bedrock:GetFoundationModel
+                Resource: '*'
+        - PolicyName: CloudFormationReadOutputs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:DescribeStacks
+                Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*
+              # 3 - Run it from Kiro (optional).ipynb (Cell K.4) shows a link to the Kiro IDE, read from the Kiro
+              # stack's URL output (Workshop Studio names that stack, so it can't be named
+              # here). Read-only, this account only; the attendee already sees the
+              # same URL in Event Outputs.
+              # Called with no stack name (to find the Kiro stack), DescribeStacks is
+              # authorized against "*", not a stack ARN, and it also needs ListStacks, which
+              # has no resource-level permissions. Both are read-only.
+              - Effect: Allow
+                Action:
+                  - cloudformation:DescribeStacks
+                  - cloudformation:ListStacks
+                Resource: '*'
+        - PolicyName: AssetsBucketReadAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Read the Workshop Studio assets bucket to stage the notebook + code.
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub "arn:aws:s3:::${BucketName}"
+                  - !Sub "arn:aws:s3:::${BucketName}/${BucketPrefix}*"
+        - PolicyName: GraphNotebookBundleRead
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # The lifecycle OnStart downloads the graph-notebook install bundle
+              # (graph_notebook.tar.gz) from AWS's public Neptune notebook bucket
+              # (regional aws-neptune-notebook-<region> or the global fallback).
+              # `aws s3 cp` signs the request, so the role needs GetObject on it.
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource:
+                  - arn:aws:s3:::aws-neptune-notebook/*
+                  - !Sub "arn:aws:s3:::aws-neptune-notebook-${AWS::Region}/*"
+        - PolicyName: DataBucketWriteAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # The notebook generates the dataset CSVs and uploads them here for
+              # the Neptune bulk loader to read.
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !GetAtt DataBucket.Arn
+                  - !Sub "${DataBucket.Arn}/*"
+        - PolicyName: StockTableAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # preload_graph.py fills the table; the notebook reads it, and Go deeper
+              # G.5 changes one count. This stack's table only.
+              - Effect: Allow
+                Action:
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:PutItem
+                  - dynamodb:BatchGetItem
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DescribeTable
+                Resource: !GetAtt StockTable.Arn
+        - PolicyName: NeptuneBulkLoadAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Needed to hand the load role to Neptune when starting a bulk load.
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt NeptuneLoadRole.Arn
+              # This stack's cluster only (its resource id, as Neptune data-plane ARNs use).
+              - Effect: Allow
+                Action:
+                  - neptune-db:*
+                Resource: !Sub arn:${AWS::Partition}:neptune-db:${AWS::Region}:${AWS::AccountId}:${NeptuneCluster.ClusterResourceId}/*
+        - PolicyName: AgentCoreDeployAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # select_supported_subnets() in deploy_agent.py calls
+              # ec2:DescribeSubnets to resolve which of the CANDIDATE private
+              # subnets CloudFormation created actually sit in an
+              # AgentCore-supported Availability Zone ID for this account -
+              # CloudFormation itself cannot determine this at template
+              # authoring time, since AZ NAME to AZ ID mapping is randomized
+              # per AWS account. Read-only, account-wide (DescribeSubnets does
+              # not support resource-level Resource scoping).
+              - Effect: Allow
+                Action: ec2:DescribeSubnets
+                Resource: '*'
+              # deploy_agent.py (run from the notebook) creates/updates the
+              # AgentCore Runtime and hands it AgentCoreExecutionRole.
+              #
+              # This is modeled directly on AWS's own BedrockAgentCoreFullAccess
+              # managed policy (fetched from docs.aws.amazon.com/aws-managed-policy
+              # /latest/reference/BedrockAgentCoreFullAccess.html, not
+              # reconstructed from memory), which itself grants the entire
+              # bedrock-agentcore:* namespace as a single wildcard rather than
+              # an enumerated action list:
+              #   {"Action": ["bedrock-agentcore:*"],
+              #    "Resource": "arn:aws:bedrock-agentcore:*:*:*"}
+              # Enumerating individual actions (CreateAgentRuntime,
+              # CreateAgentRuntimeEndpoint, ...) one at a time as each call
+              # fails with AccessDeniedException is the wrong approach: the
+              # service's surface area for a single "deploy a runtime" flow
+              # spans runtime, endpoint, tag, and workload-identity actions
+              # that are not fully enumerated in any one doc page. Grant the
+              # namespace wildcard instead, on the Resource scope explained below.
+              - Effect: Allow
+                Action: bedrock-agentcore:*
+                # Matches AWS's own BedrockAgentCoreFullAccess Resource scope
+                # exactly ("arn:aws:bedrock-agentcore:*:*:*"), not narrowed to
+                # this account/region. Some bedrock-agentcore actions (list/
+                # describe operations, workload-identity-directory paths) use
+                # ARN shapes that do not cleanly match a region:account:*
+                # pattern; narrowing this without confirming every action's
+                # actual ARN shape risks a second round of one-off
+                # AccessDenied errors on a full redeploy, which is exactly
+                # what we are trying to avoid this time.
+                Resource: 'arn:aws:bedrock-agentcore:*:*:*'
+              # AgentCore Runtime creates AWS service-linked roles on first use
+              # in an account, for its VPC networking and gateway networking
+              # paths. These are iam:CreateServiceLinkedRole calls the SERVICE
+              # makes on your behalf when a runtime with VPC NetworkConfiguration
+              # is first created - not a bedrock-agentcore:* action, and not
+              # granted by the statement above. Confirmed required by the same
+              # BedrockAgentCoreFullAccess reference policy.
+              - Effect: Allow
+                Action: iam:CreateServiceLinkedRole
+                Resource:
+                  - arn:aws:iam::*:role/aws-service-role/network.bedrock-agentcore.amazonaws.com/AWSServiceRoleForBedrockAgentCoreNetwork
+                  - arn:aws:iam::*:role/aws-service-role/bedrock-agentcore.amazonaws.com/AWSServiceRoleForBedrockAgentCoreGatewayNetwork
+                  - arn:aws:iam::*:role/aws-service-role/runtime-identity.bedrock-agentcore.amazonaws.com/AWSServiceRoleForBedrockAgentCoreRuntimeIdentity
+                  - arn:aws:iam::*:role/aws-service-role/runtime-instances.bedrock-agentcore.amazonaws.com/AWSServiceRoleForBedrockAgentCoreRuntimeInstances
+                Condition:
+                  StringEquals:
+                    iam:AWSServiceName:
+                      - network.bedrock-agentcore.amazonaws.com
+                      - bedrock-agentcore.amazonaws.com
+                      - runtime-identity.bedrock-agentcore.amazonaws.com
+                      - runtime-instances.bedrock-agentcore.amazonaws.com
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt AgentCoreExecutionRole.Arn
+
+  # The AgentCore Runtime assumes this role while running the hosted agent.
+  # Modeled directly on the AWS-documented reference execution role for
+  # AgentCore Runtime (IAM Permissions for AgentCore Runtime, "Execution role
+  # for running an agent in AgentCore Runtime"), scoped to this workshop:
+  # Bedrock invoke, CloudWatch Logs (including PutResourcePolicy, which the
+  # runtime needs even though it is easy to miss), X-Ray tracing, the
+  # bedrock-agentcore namespace CloudWatch metric, and the workload identity
+  # token actions the runtime itself requests internally on every invocation.
+  # ECR permissions are deliberately omitted: this deployment uses
+  # codeConfiguration (a .zip from S3), not containerConfiguration, so no
+  # container image is ever pulled. Neptune reachability is a network
+  # concern, granted via AgentCoreSecurityGroup above, not IAM, since Neptune
+  # in this workshop has IAM database authentication disabled.
+  AgentCoreExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub guardrail-agentcore-role-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock-agentcore.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:*
+      Policies:
+        - PolicyName: BedrockInvokePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                  - bedrock:GetInferenceProfile
+                  - bedrock:ListInferenceProfiles
+                  - bedrock:GetFoundationModel
+                Resource: '*'
+        - PolicyName: AgentCoreRuntimeLogging
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # The runtimes' own log groups, as in AWS's AgentCore execution-role policy.
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DescribeLogStreams
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/*
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/*:log-stream:*
+              # Account-level: these take no log-group resource.
+              - Effect: Allow
+                Action:
+                  - logs:DescribeLogGroups
+                  # Easy to miss: the runtime needs this in addition to the
+                  # usual create/put actions, per the AWS reference policy.
+                  - logs:PutResourcePolicy
+                Resource: '*'
+        - PolicyName: AgentCoreObservability
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                  - xray:GetSamplingRules
+                  - xray:GetSamplingTargets
+                Resource: '*'
+              - Effect: Allow
+                Action: cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: bedrock-agentcore
+        - PolicyName: AgentCoreWorkloadIdentity
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # The runtime requests a workload access token on its own,
+              # internally, for every invocation. Without this the runtime
+              # can reach READY at deploy time and still fail at invoke time.
+              - Effect: Allow
+                Action:
+                  - bedrock-agentcore:GetWorkloadAccessToken
+                  - bedrock-agentcore:GetWorkloadAccessTokenForJWT
+                  - bedrock-agentcore:GetWorkloadAccessTokenForUserId
+                Resource:
+                  - !Sub arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default
+                  - !Sub arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default/workload-identity/*
+        - PolicyName: StockTableRead
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # The guard and the ranking read stock by key; they never change it.
+              - Effect: Allow
+                Action:
+                  - dynamodb:BatchGetItem
+                  - dynamodb:GetItem
+                Resource: !GetAtt StockTable.Arn
+        - PolicyName: AgentCodeS3Read
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # The execution role's share of the defense-in-depth read grant on
+              # agent code zips, described above DataBucketPolicy (AWS does not
+              # document which identity reads them). Covers the un-guarded agent
+              # (built by AgentPackageBuild) and the guarded agent and MCP server
+              # that deploy_agent.py uploads from the notebooks (Cell 4.4 and Kiro Cell K.2).
+              # DataBucket uses SSE-S3 (AES256), so no kms:Decrypt is required.
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "${DataBucket.Arn}/guardrail/agents/*"
+      Tags:
+        - Key: Workshop
+          Value: kg-guardrail
+
+  # ── SageMaker Lifecycle Config ────────────────────────────────────────────────
+  #
+  # OnCreate: Runs once when the notebook instance is first created.
+  #   - Upgrades boto3/botocore in the conda_python3 environment for AgentCore.
+  #   - Installs strands-agents there for the notebook's in-process agents, and
+  #     pyshacl for Go deeper's optional SHACL cell (G.4).
+  #
+  # OnStart: Runs every time the notebook instance starts.
+  #   - Writes Neptune endpoint to /home/ec2-user/SageMaker/workshop/helpers/workshop_config.txt
+  #   - The notebook reads this file in the first cell (Environment Setup).
+  #
+  NotebookLifecycleConfig:
+    Type: AWS::SageMaker::NotebookInstanceLifecycleConfig
+    Properties:
+      NotebookInstanceLifecycleConfigName: !Sub guardrail-lifecycle-${AWS::StackName}
+      OnCreate:
+        - Content:
+            Fn::Base64: |
+              #!/bin/bash
+              set -e
+
+              # Upgrade boto3/botocore in the default conda Python 3 environment.
+              # This runs once at creation — restarts use the cached install.
+              # The base conda environment's pinned boto3 can predate the
+              # bedrock-agentcore / bedrock-agentcore-control service clients (a
+              # very recently added service), which would otherwise fail with
+              # UnknownServiceError when deploy_agent.py tries to create the boto3
+              # client. The graph work uses the neptunedata openCypher API (boto3),
+              # so no separate graph driver is installed.
+              sudo -u ec2-user bash << 'EOF'
+                source /home/ec2-user/anaconda3/bin/activate python3
+                pip install --upgrade "boto3>=1.40.0" "botocore>=1.40.0" --quiet --disable-pip-version-check
+                # Strands Agents: the notebook's agent loop and its BeforeToolCallEvent
+                # guard hook run in-process in the notebook before they are deployed.
+                pip install "strands-agents>=1.58,<2" --quiet --disable-pip-version-check
+                # pyshacl (pulls in RDFLib): Go deeper's optional SHACL cell (G.4) validates
+                # an order's subgraph as RDF against SHACL shapes. Kept below 0.29, the
+                # last line that accepts RDFLib 7.0, because graph-notebook (installed by
+                # OnStart) pins rdflib==7.0.0 in this same environment.
+                pip install "pyshacl>=0.26,<0.29" --quiet --disable-pip-version-check
+                conda deactivate
+              EOF
+
+              echo "Workshop OnCreate: boto3/botocore upgraded, strands-agents and pyshacl installed."
+
+      OnStart:
+        - Content:
+            Fn::Base64: !Sub |
+              #!/bin/bash
+              set -e
+
+              # Everything the attendee sees lives in one folder, ~/SageMaker/workshop
+              # (the Jupyter root is ~/SageMaker): the notebooks, your-guard/ (the
+              # files they write) and helpers/ (the given code, and this config).
+              WORKSHOP_DIR=/home/ec2-user/SageMaker/workshop
+              mkdir -p $WORKSHOP_DIR/helpers $WORKSHOP_DIR/your-guard/queries
+              chown -R ec2-user:ec2-user $WORKSHOP_DIR
+              # Write Neptune endpoint to a config file the notebook reads.
+              WORKSHOP_CONFIG=$WORKSHOP_DIR/helpers/workshop_config.txt
+              echo "NEPTUNE_ENDPOINT=${NeptuneCluster.Endpoint}" > $WORKSHOP_CONFIG
+              echo "NEPTUNE_PORT=8182" >> $WORKSHOP_CONFIG
+              echo "DATA_BUCKET=${DataBucket}" >> $WORKSHOP_CONFIG
+              echo "DATA_PREFIX=guardrail/neptune_data" >> $WORKSHOP_CONFIG
+              echo "NEPTUNE_LOAD_ROLE_ARN=${NeptuneLoadRole.Arn}" >> $WORKSHOP_CONFIG
+              echo "AWS_REGION=${AWS::Region}" >> $WORKSHOP_CONFIG
+              echo "AGENTCORE_ROLE_ARN=${AgentCoreExecutionRole.Arn}" >> $WORKSHOP_CONFIG
+              echo "AGENTCORE_SECURITY_GROUP_ID=${AgentCoreSecurityGroup.GroupId}" >> $WORKSHOP_CONFIG
+              echo "AGENTCORE_CANDIDATE_SUBNET_IDS=${PrivateSubnet1},${PrivateSubnet2},${PrivateSubnet3},${PrivateSubnet4}" >> $WORKSHOP_CONFIG
+              echo "UNGUARDED_AGENT_RUNTIME_ARN=${AgentPackageBuild.AgentRuntimeArn}" >> $WORKSHOP_CONFIG
+              # Helper modules live in workshop/helpers; the queries the attendee writes
+              # live in workshop/your-guard/queries. verify.py reads QUERIES_DIR to find them.
+              echo "QUERIES_DIR=$WORKSHOP_DIR/your-guard/queries" >> $WORKSHOP_CONFIG
+              echo "STOCK_TABLE=${StockTable}" >> $WORKSHOP_CONFIG
+              chown ec2-user:ec2-user $WORKSHOP_CONFIG
+
+              echo "Workshop OnStart: Neptune endpoint written to workshop_config.txt"
+              echo "  Endpoint: ${NeptuneCluster.Endpoint}"
+              echo "  Data bucket: ${DataBucket}"
+              echo "  AgentCore role: ${AgentCoreExecutionRole.Arn}"
+
+              # ── Neptune graph-notebook: %status/%load/%summary/%%oc magics + Graph Explorer ──
+              # Mirrors neptune-workbench-stack.yaml. graph-notebook reads these
+              # GRAPH_NOTEBOOK_* env vars; the AWS-published bundle installs the
+              # JupyterLab 4 extension (and the Graph Explorer app) onto the
+              # instance. IAM auth is off on the cluster, so AUTH_MODE=DEFAULT.
+              # Wrapped with `|| echo` so a transient install hiccup cannot abort
+              # the rest of OnStart (config above and code staging below).
+              sudo -u ec2-user -i bash <<EOG || echo "Workshop OnStart: graph-notebook setup reported an error (check the lifecycle log)"
+                set -e
+                {
+                  echo "export GRAPH_NOTEBOOK_AUTH_MODE=DEFAULT"
+                  echo "export GRAPH_NOTEBOOK_HOST=${NeptuneCluster.Endpoint}"
+                  echo "export GRAPH_NOTEBOOK_PORT=8182"
+                  echo "export GRAPH_NOTEBOOK_SSL=True"
+                  echo "export NEPTUNE_LOAD_FROM_S3_ROLE_ARN=${NeptuneLoadRole.Arn}"
+                  echo "export AWS_REGION=${AWS::Region}"
+                } >> ~/.bashrc
+                aws s3 cp s3://aws-neptune-notebook-${AWS::Region}/graph_notebook.tar.gz /tmp/graph_notebook.tar.gz \
+                  || aws s3 cp s3://aws-neptune-notebook/graph_notebook.tar.gz /tmp/graph_notebook.tar.gz
+                rm -rf /tmp/graph_notebook
+                tar -zxvf /tmp/graph_notebook.tar.gz -C /tmp
+                chmod +x /tmp/graph_notebook/install_jl4x.sh
+                /tmp/graph_notebook/install_jl4x.sh
+              EOG
+
+              # Auto-stage the workshop notebook and code from the Workshop Studio
+              # assets bucket so participants do not need to download/upload manually.
+              # Workshop Studio uploads the repo `static/` folder to
+              #   s3://${BucketName}/${BucketPrefix}
+              # so notebook assets live under the `notebook/`, `code/`, and
+              # `queries/` prefixes.
+              if [ -n "${BucketName}" ]; then
+                sudo -u ec2-user bash << 'EOF'
+                  set -e
+                  cd /home/ec2-user/SageMaker/workshop
+                  # One folder for the attendee: the notebooks and a README at the top,
+                  # the queries they write in your-guard/queries, and the given .py helper
+                  # modules in helpers/. The notebooks put helpers/ on sys.path in their
+                  # first cell, and verify.py finds the queries via QUERIES_DIR above.
+                  mkdir -p helpers your-guard/queries
+                  aws s3 cp "s3://${BucketName}/${BucketPrefix}notebook/" ./ --recursive || true
+                  # Stage only the helper modules the notebooks import. Exclude the
+                  # infra files that live in the code/ prefix for CloudFormation's sake
+                  # but have no business on the attendee's instance: the Lambda's
+                  # deployment zip, the Lambda source, and the un-guarded agent source
+                  # (CloudFormation deploys that; the notebook only invokes it by ARN).
+                  aws s3 cp "s3://${BucketName}/${BucketPrefix}code/" ./helpers/ --recursive \
+                    --exclude "*.zip" \
+                    --exclude "lambda_build_agent_package.py" \
+                    --exclude "unguarded_agent.py" || true
+                  # The queries are copied only where missing: a restart keeps what the
+                  # attendee wrote.
+                  for q in $(aws s3 ls "s3://${BucketName}/${BucketPrefix}queries/" | awk '{print $NF}'); do
+                    [ -e "your-guard/queries/$q" ] || aws s3 cp "s3://${BucketName}/${BucketPrefix}queries/$q" "your-guard/queries/$q" || true
+                  done
+                  echo "Workshop OnStart: staged workshop/ (notebooks), workshop/helpers/ (code), workshop/your-guard/queries/."
+              EOF
+                # Load the graph in the background, so it's ready before the session starts
+                # (Cell 0.1 waits for it). Does nothing if the graph is already loaded.
+                # setsid + nohup: it outlives this script, which must finish within 5 minutes.
+                sudo -u ec2-user -i bash << 'EOF'
+                  source /home/ec2-user/anaconda3/bin/activate python3
+                  cd /home/ec2-user/SageMaker/workshop
+                  setsid nohup python3 -u helpers/preload_graph.py > helpers/preload.log 2>&1 < /dev/null &
+                  echo "Workshop OnStart: graph preload started in the background (workshop/helpers/preload.log)."
+              EOF
+              else
+                echo "Workshop OnStart: BucketName empty - skipping asset staging (local deploy)."
+              fi
+
+  # ── SageMaker Notebook Instance ───────────────────────────────────────────────
+  SageMakerNotebookInstance:
+    Type: AWS::SageMaker::NotebookInstance
+    DependsOn:
+      - NeptuneCluster
+      - NeptuneInstance
+      - NotebookLifecycleConfig
+    Properties:
+      # Name MUST start with "aws-neptune-notebook-" and the two Neptune tags
+      # below MUST be present: together with the graph-notebook bundle installed
+      # in the lifecycle, these are what light up the %status/%load/%summary/
+      # %%oc magics (auto Graph + Table tabs) and the built-in Graph
+      # Explorer - exactly the Neptune Workbench experience the reference
+      # workshop uses. This mirrors neptune-workbench-stack.yaml.
+      NotebookInstanceName: !Sub "aws-neptune-notebook-guardrail-${AWS::StackName}"
+      # AL2023 / JupyterLab 4 platform, required by the graph_notebook install
+      # bundle's install_jl4x.sh (see the lifecycle OnStart below).
+      PlatformIdentifier: notebook-al2023-v1
+      # IMDSv2 only (session-token metadata requests); boto3 and the AWS CLI use it.
+      InstanceMetadataServiceConfiguration:
+        MinimumInstanceMetadataServiceVersion: '2'
+      InstanceType: !Ref NotebookInstanceType
+      RoleArn: !GetAtt SageMakerExecutionRole.Arn
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref SageMakerSecurityGroup
+      LifecycleConfigName: !GetAtt NotebookLifecycleConfig.NotebookInstanceLifecycleConfigName
+      DirectInternetAccess: Enabled    # Required for Bedrock (public endpoint)
+      VolumeSizeInGB: 10
+      Tags:
+        - Key: Name
+          Value: guardrail-workshop-notebook
+        - Key: Workshop
+          Value: kg-guardrail
+        # Associate the notebook with the Neptune cluster (workbench convention).
+        - Key: aws-neptune-cluster-id
+          Value: !Ref NeptuneCluster
+        - Key: aws-neptune-resource-id
+          Value: !GetAtt NeptuneCluster.ClusterResourceId
+
+# ── Outputs ───────────────────────────────────────────────────────────────────
+Outputs:
+  # Workshop Studio shows every output to attendees under Event Outputs, so there is one: the way
+  # into their notebook (the Kiro stack adds its URL and Password). The notebooks read everything
+  # else from workshop_config.txt, which OnStart writes from the resources directly.
+  NeptuneNotebookURL:
+    Description: >
+      Your Neptune notebook instance in the SageMaker AI console. Open the AWS console from this
+      guide's left menu first, then this link, and choose Open JupyterLab.
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/sagemaker/home?region=${AWS::Region}#/notebook-instances/${SageMakerNotebookInstance.NotebookInstanceName}"

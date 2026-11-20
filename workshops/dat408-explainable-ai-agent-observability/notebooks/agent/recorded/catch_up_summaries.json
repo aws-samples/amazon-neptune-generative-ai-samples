@@ -1,0 +1,77 @@
+{
+ "recorded": "recorded on the dev stack, 2026-10-22",
+ "evaluation_id": "a6154138-c8d8-4e64-8bb8-21f38d8741b1",
+ "summaries": [
+  {
+   "reasons": [
+    {
+     "reason": "Loan-to-value ratio of 98.2% ($280,000 loan on $285,000 appraised value) exceeds the maximum 96.5% LTV permitted for FHA purchase transactions under HUD 4000.1 II.A.2.b",
+     "step": 7
+    },
+    {
+     "reason": "Back-end DTI of 58.9% exceeds the maximum allowable 50% even under the most permissive manual-underwriting compensating-factor tier (40/50) per HUD 4000.1 II.A.5.d viii",
+     "step": 7
+    },
+    {
+     "reason": "Front-end PTI of 47.2% exceeds the maximum allowable 40% even under the most permissive manual-underwriting compensating-factor tier (40/50) per HUD 4000.1 II.A.5.d viii",
+     "step": 7
+    },
+    {
+     "reason": "No combination of compensating factors (cash reserves, minimal payment increase, residual income, additional income) can cure the ratio deficiency because the ratios exceed the highest permissible tier outright, per HUD 4000.1 II.A.5.d ix",
+     "step": 7
+    }
+   ],
+   "information": [
+    "Credit score: 618 (FICO 10T), fair payment history, 2 derogatory marks, 67% credit utilization, 4 hard inquiries in 12 months (Step 0)",
+    "Verified annual income: $45,000; employment 1 year at current employer, full-time (Step 1)",
+    "Back-end DTI: 58.9%; front-end DTI: 47.2%; monthly disposable income: $1,540 (Step 2)",
+    "Appraised value: $285,000; loan amount: $280,000; LTV: 98.2%; property condition: fair (Step 3)",
+    "HUD 4000.1 II.A.2.b LTV limits policy excerpts (Step 4)",
+    "HUD 4000.1 II.A.5.d qualifying ratio and compensating factor policy excerpts (Step 5)",
+    "HUD 4000.1 II.A.4.a/II.A.4.b/II.A.5.a derogatory credit policy excerpts (Step 6)"
+   ],
+   "policies": [
+    "HUD 4000.1 II.A.2.b (Loan-to-Value Limits)",
+    "HUD 4000.1 II.A.5.d (Final Underwriting Decision - Manual, including Approvable Ratio Requirements and Compensating Factors)",
+    "HUD 4000.1 II.A.4.a (Underwriting with an Automated Underwriting System)",
+    "HUD 4000.1 II.A.4.b (Credit Requirements - TOTAL)",
+    "HUD 4000.1 II.A.5.a (Credit Requirements - Manual)",
+    "12 CFR 1026.43 (Regulation Z - Minimum standards for transactions secured by a dwelling)"
+   ]
+  },
+  {
+   "reasons": [
+    {
+     "reason": "Loan-to-value ratio of 98.2% ($280,000 loan on $285,000 appraised value) exceeds the maximum 96.5% LTV permitted for FHA purchase transactions",
+     "step": 7
+    },
+    {
+     "reason": "Back-end DTI of 58.9% and front-end PTI of 47.2% exceed the maximum allowable qualifying ratios for manually underwritten FHA loans (40%/50% ceiling even with two compensating factors), and no combination of compensating factors can cure ratios that already exceed the highest permissible tier",
+     "step": 7
+    },
+    {
+     "reason": "Insufficient qualifying income relative to total monthly debt obligations to support the requested loan amount (used as supporting/derivative reason tied to the DTI violation)",
+     "step": 7
+    }
+   ],
+   "information": [
+    "Credit score: 618 (FICO 10T), fair payment history, 2 derogatory marks, 67% credit utilization, 3 years credit history, 4 hard inquiries in 12 months (Step 0)",
+    "Verified annual income $45,000 ($3,750/month); stated income $48,000 (6.2% discrepancy); employment verified full-time, 1 year at current employer (Step 1)",
+    "Back-end DTI 58.9%, front-end DTI/PTI 47.2%; monthly disposable income $1,540; debt components include $280 credit cards, $160 personal loan, $1,770 proposed mortgage payment (Step 2)",
+    "Appraised value $285,000; loan amount $280,000; LTV 98.2%; property condition fair (Step 3)",
+    "HUD 4000.1 II.A.2.b policy text establishing 96.5% maximum LTV for purchase transactions (Step 4)",
+    "HUD 4000.1 II.A.5.d policy text establishing maximum qualifying ratio matrix (31/43 up to 40/50) by credit score and compensating factors (Step 5)",
+    "HUD 4000.1 II.A.5.a/II.A.4.b policy text on derogatory credit, disputed accounts, and downgrade-to-manual-underwriting triggers (Step 6)"
+   ],
+   "policies": [
+    "HUD 4000.1 II.A.2.b (Loan-to-Value Limits)",
+    "HUD 4000.1 II.A.5.d (Final Underwriting Decision (Manual) / Approvable Ratio Requirements)",
+    "HUD 4000.1 II.A.5.d ix (Documenting Acceptable Compensating Factors)",
+    "HUD 4000.1 II.A.4.a (Underwriting with an Automated Underwriting System)",
+    "HUD 4000.1 II.A.4.b (Credit Requirements (TOTAL))",
+    "HUD 4000.1 II.A.5.a (Credit Requirements (Manual))",
+    "12 CFR 1026.43 (Regulation Z - Minimum standards for transactions secured by a dwelling)"
+   ]
+  }
+ ]
+}

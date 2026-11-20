@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="440" viewBox="0 0 860 440" role="img" aria-label="Your notebook instance in the Amazon SageMaker AI console. 1: the instance, with status InService. 2: Open JupyterLab.">
+<title>Your notebook instance in the Amazon SageMaker AI console. 1: the instance, with status InService. 2: Open JupyterLab.</title>
+<rect x="0" y="0" width="860" height="440" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
+<rect x="0" y="0" width="860" height="48" rx="0" fill="#232f3e" stroke="none" stroke-width="1"/>
+<text x="20" y="31" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#fff" text-anchor="start">aws</text>
+<rect x="110" y="10" width="300" height="28" rx="8" fill="#232f3e" stroke="#8c8c94" stroke-width="1"/>
+<text x="140" y="29" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#d1d5db" text-anchor="start">Search</text>
+<text x="840" y="31" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#fff" text-anchor="end">United States (Oregon) ▾</text>
+<text x="24" y="82" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#0972d3" text-anchor="start">Amazon SageMaker AI</text>
+<text x="184" y="82" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5f6b7a" text-anchor="start">›</text>
+<text x="200" y="82" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#0972d3" text-anchor="start">Notebook instances</text>
+<text x="340" y="82" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5f6b7a" text-anchor="start">›</text>
+<text x="356" y="82" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5f6b7a" text-anchor="start">aws-neptune-notebook-guardrail-workshop</text>
+<path d="M0 100H860" stroke="#d1d5db"/>
+<text x="24" y="146" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="21" font-weight="700" fill="#16191f" text-anchor="start">aws-neptune-notebook-guardrail-workshop</text>
+<rect x="560" y="122" width="140" height="38" rx="19" fill="#fff" stroke="#0972d3" stroke-width="2"/>
+<text x="630" y="146" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0972d3" text-anchor="middle">Open Jupyter</text>
+<rect x="710" y="122" width="136" height="38" rx="19" fill="#0972d3" stroke="none" stroke-width="1"/>
+<text x="778" y="146" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">Open JupyterLab</text>
+<rect x="24" y="186" width="812" height="196" rx="14" fill="#fff" stroke="#d1d5db" stroke-width="1"/>
+<text x="48" y="226" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#16191f" text-anchor="start">Notebook instance settings</text>
+<text x="58" y="268" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#16191f" text-anchor="start">Name</text>
+<text x="58" y="290" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#16191f" text-anchor="start">aws-neptune-notebook-guardrail-workshop</text>
+<text x="470" y="268" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#16191f" text-anchor="start">Status</text>
+<circle cx="478" cy="285" r="7" fill="none" stroke="#037f0c" stroke-width="2"/><path d="M474 285l3 3 5-6" fill="none" stroke="#037f0c" stroke-width="2"/>
+<text x="492" y="290" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#037f0c" text-anchor="start">InService</text>
+<text x="58" y="338" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#16191f" text-anchor="start">Notebook instance type</text>
+<text x="58" y="360" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#16191f" text-anchor="start">ml.t3.xlarge</text>
+<text x="470" y="338" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#16191f" text-anchor="start">Lifecycle configuration</text>
+<text x="470" y="360" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#16191f" text-anchor="start">guardrail-lifecycle-…</text>
+<rect x="48" y="250" width="780" height="52" rx="6" fill="none" stroke="#6d4ae0" stroke-width="2.5"/>
+<circle cx="26" cy="276" r="15" fill="#6d4ae0"/>
+<text x="26" y="281.5" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+<rect x="704" y="116" width="148" height="50" rx="6" fill="none" stroke="#6d4ae0" stroke-width="2.5"/>
+<circle cx="690" cy="182" r="15" fill="#6d4ae0"/>
+<text x="690" y="187.5" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+<rect x="710" y="394" width="140" height="36" rx="6" fill="#232f3e" stroke="none" stroke-width="1"/>
+<text x="722" y="409" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="start">Mock</text>
+<text x="722" y="423" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#d1d5db" text-anchor="start">Not a real screenshot</text>
+</svg>

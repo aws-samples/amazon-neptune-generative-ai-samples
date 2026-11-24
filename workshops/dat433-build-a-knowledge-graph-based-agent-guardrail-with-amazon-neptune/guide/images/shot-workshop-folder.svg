@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="440" viewBox="0 0 900 440" role="img" aria-label="The workshop folder in JupyterLab&#x27;s file browser. 1: 1 - Build the guardrail, the session, which holds notebooks 1.1 to 1.4. 2: notebook 1.1, where you start. 3: the openCypher cheat sheet.">
+<title>The workshop folder in JupyterLab&#x27;s file browser. 1: 1 - Build the guardrail, the session, which holds notebooks 1.1 to 1.4. 2: notebook 1.1, where you start. 3: the openCypher cheat sheet.</title>
+<rect x="0" y="0" width="900" height="440" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
+<rect x="0" y="0" width="900" height="36" rx="0" fill="#f5f5f5" stroke="none" stroke-width="1"/>
+<text x="16" y="24" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#16191f" text-anchor="start">File</text>
+<text x="82" y="24" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#16191f" text-anchor="start">Edit</text>
+<text x="148" y="24" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#16191f" text-anchor="start">View</text>
+<text x="214" y="24" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#16191f" text-anchor="start">Run</text>
+<text x="280" y="24" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#16191f" text-anchor="start">Kernel</text>
+<text x="346" y="24" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#16191f" text-anchor="start">Tabs</text>
+<text x="412" y="24" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#16191f" text-anchor="start">Settings</text>
+<text x="478" y="24" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#16191f" text-anchor="start">Help</text>
+<path d="M0 36H900" stroke="#d1d5db"/>
+<rect x="0" y="36" width="44" height="404" rx="0" fill="#eeeeee" stroke="none" stroke-width="1"/>
+<path d="M462 50V410" stroke="#d1d5db" stroke-dasharray="4 4"/>
+<path d="M440 152h36" stroke="#6d4ae0" stroke-width="2.5"/><path d="M476 146l8 6-8 6z" fill="#6d4ae0"/>
+<rect x="48" y="36" width="400" height="380" rx="0" fill="#fff" stroke="none" stroke-width="1"/>
+<text x="64" y="66" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#5f6b7a" text-anchor="start">/ workshop /</text>
+<text x="64" y="96" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#5f6b7a" text-anchor="start">Name</text>
+<text x="388" y="96" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#5f6b7a" text-anchor="start">Modified</text>
+<path d="M56 104H440" stroke="#d1d5db"/>
+<path d="M68 117h7l2 3h9v10h-18z" fill="#f2b600"/>
+<text x="94" y="128" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#16191f" text-anchor="start">1 - Build the guardrail</text>
+<path d="M68 145h7l2 3h9v10h-18z" fill="#f2b600"/>
+<text x="94" y="156" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#16191f" text-anchor="start">helpers</text>
+<path d="M68 173h7l2 3h9v10h-18z" fill="#f2b600"/>
+<text x="94" y="184" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#16191f" text-anchor="start">your-guard</text>
+<rect x="69" y="200" width="14" height="15" rx="2" fill="#f37726"/>
+<text x="94" y="212" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#16191f" text-anchor="start">2 - Go deeper (optional).ipynb</text>
+<rect x="69" y="228" width="14" height="15" rx="2" fill="#f37726"/>
+<text x="94" y="240" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#16191f" text-anchor="start">3 - Run it from Kiro (optional).ipynb</text>
+<rect x="69" y="256" width="14" height="15" rx="2" fill="#f37726"/>
+<text x="94" y="268" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#16191f" text-anchor="start">4 - openCypher cheat sheet.ipynb</text>
+<rect x="69" y="284" width="14" height="15" rx="2" fill="#7a7a7a"/>
+<text x="94" y="296" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#16191f" text-anchor="start">README.md</text>
+<rect x="490" y="36" width="400" height="380" rx="0" fill="#fff" stroke="none" stroke-width="1"/>
+<text x="506" y="66" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#5f6b7a" text-anchor="start">/ workshop / 1 - Build the guardrail /</text>
+<text x="506" y="96" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#5f6b7a" text-anchor="start">Name</text>
+<text x="830" y="96" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#5f6b7a" text-anchor="start">Modified</text>
+<path d="M498 104H882" stroke="#d1d5db"/>
+<rect x="511" y="116" width="14" height="15" rx="2" fill="#f37726"/>
+<text x="536" y="128" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#16191f" text-anchor="start">1.1 - Adding a hook before every tool call.ipynb</text>
+<rect x="511" y="144" width="14" height="15" rx="2" fill="#f37726"/>
+<text x="536" y="156" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#16191f" text-anchor="start">1.2 - Computing OFAC&#x27;s 50 percent rule.ipynb</text>
+<rect x="511" y="172" width="14" height="15" rx="2" fill="#f37726"/>
+<text x="536" y="184" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#16191f" text-anchor="start">1.3 - Checking every rule in one report.ipynb</text>
+<rect x="511" y="200" width="14" height="15" rx="2" fill="#f37726"/>
+<text x="536" y="212" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#16191f" text-anchor="start">1.4 - Testing and deploying the guardrail.ipynb</text>
+<rect x="56" y="109" width="384" height="26" rx="6" fill="none" stroke="#6d4ae0" stroke-width="2.5"/>
+<circle cx="34" cy="122" r="15" fill="#6d4ae0"/>
+<text x="34" y="127.5" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+<rect x="56" y="249" width="384" height="26" rx="6" fill="none" stroke="#6d4ae0" stroke-width="2.5"/>
+<circle cx="34" cy="262" r="15" fill="#6d4ae0"/>
+<text x="34" y="267.5" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+<rect x="498" y="109" width="392" height="26" rx="6" fill="none" stroke="#6d4ae0" stroke-width="2.5"/>
+<circle cx="476" cy="122" r="15" fill="#6d4ae0"/>
+<text x="476" y="127.5" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+<rect x="750" y="394" width="140" height="36" rx="6" fill="#232f3e" stroke="none" stroke-width="1"/>
+<text x="762" y="409" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="start">Mock</text>
+<text x="762" y="423" font-family="'Amazon Ember', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#d1d5db" text-anchor="start">Not a real screenshot</text>
+</svg>

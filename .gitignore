@@ -1,3 +1,6 @@
 .DS_Store
 .ash/
 ash_output/
+__pycache__/
+*.pyc
+workshops/dat408-explainable-ai-agent-observability/build/

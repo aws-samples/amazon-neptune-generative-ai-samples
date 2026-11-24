@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="72" viewBox="0 0 1080 72" role="img" aria-label="Step 2 of 4: Computing OFAC&#x27;s 50 percent rule">
+<title>Step 2 of 4: Computing OFAC&#x27;s 50 percent rule</title>
+<rect x="0.0" y="0" width="258.0" height="60" rx="10" fill="#f1f4f8"/>
+<text x="14.0" y="23" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#475569">1 · Adding a hook before every tool call</text>
+<circle cx="24.0" cy="42" r="10" fill="#0f172a"/>
+<path d="M19.5 42l3.2 3.2 6-6.4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="42.0" y="46.5" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" fill="#475569">guarded, still drafted</text>
+<rect x="274.0" y="0" width="258.0" height="60" rx="10" fill="#f1f4f8"/>
+<text x="288.0" y="23" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#0f172a">2 · Computing OFAC&#x27;s 50 percent rule</text>
+<rect x="288.0" y="33" width="160.0" height="18" rx="5" fill="#fff" stroke="#cbd5e1" stroke-width="1"/>
+<rect x="288.0" y="33" width="5" height="18" rx="2.5" fill="#6d4ae0"/>
+<rect x="304.0" y="40" width="72.0" height="4" rx="2" fill="#e2e8f0"/>
+<rect x="548.0" y="0" width="258.0" height="60" rx="10" fill="#f1f4f8"/>
+<text x="562.0" y="23" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#475569">3 · Checking every rule in one report</text>
+<rect x="822.0" y="0" width="258.0" height="60" rx="10" fill="#f1f4f8"/>
+<text x="836.0" y="23" font-family="'Amazon Ember', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#475569">4 · Testing and deploying the guardrail</text>
+</svg>
